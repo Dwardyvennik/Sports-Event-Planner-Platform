@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package sports.auth.v1;
+
+option go_package = "github.com/university/sports-event-planner-platform/services/auth-service/proto/auth/v1;authv1";
+
+service AuthService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+}

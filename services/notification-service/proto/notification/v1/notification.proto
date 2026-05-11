@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package sports.notification.v1;
+
+option go_package = "github.com/university/sports-event-planner-platform/services/notification-service/proto/notification/v1;notificationv1";
+
+service NotificationService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+}

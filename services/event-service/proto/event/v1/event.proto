@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package sports.event.v1;
+
+option go_package = "github.com/university/sports-event-planner-platform/services/event-service/proto/event/v1;eventv1";
+
+service EventService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+}
