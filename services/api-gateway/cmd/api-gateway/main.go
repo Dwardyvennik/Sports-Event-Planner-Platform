@@ -1,11 +1,12 @@
 package main
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
-	"github.com/university/sports-event-planner-platform/pkg/httpx"
 	"github.com/university/sports-event-planner-platform/pkg/lifecycle"
 	"github.com/university/sports-event-planner-platform/pkg/logger"
 	serviceconfig "github.com/university/sports-event-planner-platform/services/api-gateway/internal/config"
@@ -35,12 +36,23 @@ func main() {
 		}
 	}()
 
-	httpServer := httpx.NewServer(cfg.HTTP, cfg.App.Name, container.Checks(), log, func(mux *http.ServeMux) {
-		deliveryhttp.RegisterRoutes(mux, container.GatewayUseCase)
-	})
+	router := deliveryhttp.NewRouter(container.Clients, container.Checks(), log)
+	httpServer := &http.Server{
+		Addr:              cfg.HTTP.Addr,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 
 	errCh := make(chan error, 1)
-	go func() { errCh <- httpx.Serve(httpServer, log) }()
+	go func() {
+		log.Info("http server listening", "addr", httpServer.Addr)
+		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+	}()
 
 	select {
 	case <-ctx.Done():
@@ -53,7 +65,8 @@ func main() {
 	shutdownCtx, cancel := lifecycle.ShutdownContext(cfg.App.ShutdownTimeout)
 	defer cancel()
 
-	if err := httpx.Shutdown(shutdownCtx, httpServer, log); err != nil {
+	log.Info("http server shutting down", "addr", httpServer.Addr)
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		log.Error("http shutdown failed", "error", err)
 	}
 }

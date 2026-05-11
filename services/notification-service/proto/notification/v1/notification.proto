@@ -5,11 +5,42 @@ package sports.notification.v1;
 option go_package = "github.com/university/sports-event-planner-platform/services/notification-service/proto/notification/v1;notificationv1";
 
 service NotificationService {
-  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc SendNotification(SendNotificationRequest) returns (NotificationResponse);
+  rpc SendReminder(SendReminderRequest) returns (NotificationResponse);
+  rpc GetNotifications(GetNotificationsRequest) returns (GetNotificationsResponse);
 }
 
-message HealthRequest {}
+message SendNotificationRequest {
+  string user_id = 1;
+  string channel = 2;
+  string subject = 3;
+  string body = 4;
+}
 
-message HealthResponse {
-  string status = 1;
+message SendReminderRequest {
+  string event_id = 1;
+  string user_id = 2;
+  string message = 3;
+  string scheduled_at = 4;
+}
+
+message NotificationResponse {
+  string notification_id = 1;
+  string status = 2;
+}
+
+message GetNotificationsRequest {
+  string user_id = 1;
+}
+
+message Notification {
+  string id = 1;
+  string user_id = 2;
+  string channel = 3;
+  string subject = 4;
+  string status = 5;
+}
+
+message GetNotificationsResponse {
+  repeated Notification notifications = 1;
 }

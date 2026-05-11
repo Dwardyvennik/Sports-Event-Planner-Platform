@@ -7,14 +7,19 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
 func NewServer(service string, log *slog.Logger) *grpc.Server {
 	server := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(unaryLoggingInterceptor(log)),
+		grpc.ChainUnaryInterceptor(
+			recoveryInterceptor(log),
+			unaryLoggingInterceptor(log),
+		),
 	)
 
 	healthServer := health.NewServer()
@@ -24,6 +29,52 @@ func NewServer(service string, log *slog.Logger) *grpc.Server {
 	reflection.Register(server)
 
 	return server
+}
+
+func UnaryClientTimeoutInterceptor(timeout time.Duration) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		if _, ok := ctx.Deadline(); !ok && timeout > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, timeout)
+			defer cancel()
+		}
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
+}
+
+func UnaryClientLoggingInterceptor(log *slog.Logger) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		started := time.Now()
+		err := invoker(ctx, method, req, reply, cc, opts...)
+		if err != nil {
+			log.WarnContext(ctx, "grpc client request failed",
+				"method", method,
+				"duration_ms", time.Since(started).Milliseconds(),
+				"error", err,
+			)
+			return err
+		}
+		log.DebugContext(ctx, "grpc client request completed",
+			"method", method,
+			"duration_ms", time.Since(started).Milliseconds(),
+		)
+		return nil
+	}
+}
+
+func recoveryInterceptor(log *slog.Logger) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (response any, err error) {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				log.ErrorContext(ctx, "grpc panic recovered",
+					"method", info.FullMethod,
+					"panic", recovered,
+				)
+				err = status.Error(codes.Internal, "internal server error")
+			}
+		}()
+		return handler(ctx, req)
+	}
 }
 
 func Serve(server *grpc.Server, addr string, log *slog.Logger) error {

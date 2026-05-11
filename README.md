@@ -19,3 +19,32 @@ make migrate-up
 ```
 
 Prometheus runs on `localhost:9090`, Grafana on `localhost:3000`, RabbitMQ management on `localhost:15672`, and the API gateway on `localhost:8080`.
+
+## API Gateway Routes
+
+Public:
+
+- `POST /v1/auth/register`
+- `POST /v1/auth/login`
+
+Protected with `Authorization: Bearer <token>`:
+
+- `GET /v1/auth/me`
+- `POST /v1/events`
+- `PUT /v1/events/:id`
+- `GET /v1/events/:id`
+- `GET /v1/events`
+- `POST /v1/events/:id/join`
+- `DELETE /v1/events/:id/join`
+- `GET /v1/users/:id/events`
+- `POST /v1/notifications`
+- `POST /v1/events/:id/reminders`
+- `GET /v1/users/:id/notifications`
+
+Operational:
+
+- `GET /healthz`
+- `GET /readyz`
+- `GET /metrics`
+
+The gateway uses Gin for REST routing and typed gRPC clients for service-to-service calls. The current stubs are intentionally minimal and use the shared JSON gRPC codec in `pkg/grpcx` so the skeleton compiles and runs without requiring local protobuf codegen plugins.

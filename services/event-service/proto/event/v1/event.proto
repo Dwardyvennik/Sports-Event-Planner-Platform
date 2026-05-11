@@ -5,11 +5,77 @@ package sports.event.v1;
 option go_package = "github.com/university/sports-event-planner-platform/services/event-service/proto/event/v1;eventv1";
 
 service EventService {
-  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc CreateEvent(CreateEventRequest) returns (EventResponse);
+  rpc UpdateEvent(UpdateEventRequest) returns (EventResponse);
+  rpc GetEvent(GetEventRequest) returns (EventResponse);
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+  rpc JoinEvent(JoinEventRequest) returns (EventActionResponse);
+  rpc LeaveEvent(LeaveEventRequest) returns (EventActionResponse);
+  rpc GetUserEvents(GetUserEventsRequest) returns (GetUserEventsResponse);
 }
 
-message HealthRequest {}
+message Event {
+  string id = 1;
+  string title = 2;
+  string sport = 3;
+  string venue = 4;
+  string scheduled_at = 5;
+  int32 capacity = 6;
+}
 
-message HealthResponse {
+message CreateEventRequest {
+  string title = 1;
+  string sport = 2;
+  string venue = 3;
+  string scheduled_at = 4;
+  int32 capacity = 5;
+}
+
+message UpdateEventRequest {
+  string event_id = 1;
+  string title = 2;
+  string sport = 3;
+  string venue = 4;
+  string scheduled_at = 5;
+  int32 capacity = 6;
+}
+
+message GetEventRequest {
+  string event_id = 1;
+}
+
+message ListEventsRequest {
+  string sport = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message EventResponse {
+  Event event = 1;
+}
+
+message ListEventsResponse {
+  repeated Event events = 1;
+}
+
+message JoinEventRequest {
+  string event_id = 1;
+  string user_id = 2;
+}
+
+message LeaveEventRequest {
+  string event_id = 1;
+  string user_id = 2;
+}
+
+message EventActionResponse {
   string status = 1;
+}
+
+message GetUserEventsRequest {
+  string user_id = 1;
+}
+
+message GetUserEventsResponse {
+  repeated Event events = 1;
 }

@@ -17,7 +17,7 @@ type Container struct {
 }
 
 func NewContainer(ctx context.Context, cfg config.Config, log *slog.Logger) (*Container, error) {
-	clients, err := deliverygrpc.Dial(ctx, cfg.Endpoints)
+	clients, err := deliverygrpc.Dial(ctx, cfg.Endpoints, log)
 	if err != nil {
 		return nil, err
 	}
