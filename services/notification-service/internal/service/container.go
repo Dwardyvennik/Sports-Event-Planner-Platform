@@ -12,6 +12,8 @@ import (
 	sharedpostgres "github.com/university/sports-event-planner-platform/pkg/postgres"
 	"github.com/university/sports-event-planner-platform/pkg/rabbitmq"
 	"github.com/university/sports-event-planner-platform/services/notification-service/internal/config"
+	"github.com/university/sports-event-planner-platform/services/notification-service/internal/consumer"
+	"github.com/university/sports-event-planner-platform/services/notification-service/internal/mailgun"
 	notificationpostgres "github.com/university/sports-event-planner-platform/services/notification-service/internal/repository/postgres"
 	"github.com/university/sports-event-planner-platform/services/notification-service/internal/usecase"
 )
@@ -21,9 +23,10 @@ type Container struct {
 	RabbitMQ               *amqp.Connection
 	NotificationRepository *notificationpostgres.NotificationRepository
 	NotificationUseCase    *usecase.NotificationUseCase
+	EventConsumer          *consumer.EventConsumer
 }
 
-func NewContainer(ctx context.Context, cfg config.Config, log *slog.Logger) (*Container, error) {
+func NewContainer(ctx context.Context, cfg config.NotificationConfig, log *slog.Logger) (*Container, error) {
 	db, err := sharedpostgres.Connect(ctx, cfg.Postgres)
 	if err != nil {
 		return nil, err
@@ -37,14 +40,21 @@ func NewContainer(ctx context.Context, cfg config.Config, log *slog.Logger) (*Co
 		return nil, err
 	}
 
+	mg := mailgun.NewClient(cfg.Mailgun.APIKey, cfg.Mailgun.Domain, cfg.Mailgun.From)
+
 	notifications := notificationpostgres.NewNotificationRepository(db)
+	uc := usecase.NewNotificationUseCase(notifications, mg, log)
+
+	ec := consumer.NewEventConsumer(broker, uc, log)
+
 	log.Info("notification dependencies wired")
 
 	return &Container{
 		DB:                     db,
 		RabbitMQ:               broker,
 		NotificationRepository: notifications,
-		NotificationUseCase:    usecase.NewNotificationUseCase(notifications),
+		NotificationUseCase:    uc,
+		EventConsumer:          ec,
 	}, nil
 }
 
