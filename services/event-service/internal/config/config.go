@@ -9,8 +9,5 @@ func Load() (Config, error) {
 		"event-service",
 		sharedconfig.WithGRPCAddr(":50052"),
 		sharedconfig.WithHTTPAddr(":8082"),
-		sharedconfig.WithPostgres("postgres://event_user:event_pass@localhost:5434/event_db?sslmode=disable"),
-		sharedconfig.WithRedis(),
-		sharedconfig.WithRabbitMQ(),
 	)
 }

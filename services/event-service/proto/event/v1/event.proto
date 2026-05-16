@@ -6,38 +6,44 @@ option go_package = "github.com/university/sports-event-planner-platform/service
 
 service EventService {
   rpc CreateEvent(CreateEventRequest) returns (EventResponse);
-  rpc UpdateEvent(UpdateEventRequest) returns (EventResponse);
   rpc GetEvent(GetEventRequest) returns (EventResponse);
   rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
-  rpc JoinEvent(JoinEventRequest) returns (EventActionResponse);
-  rpc LeaveEvent(LeaveEventRequest) returns (EventActionResponse);
-  rpc GetUserEvents(GetUserEventsRequest) returns (GetUserEventsResponse);
+  rpc DeleteEvent(DeleteEventRequest) returns (DeleteEventResponse);
 }
 
 message Event {
   string id = 1;
-  string title = 2;
-  string sport = 3;
-  string venue = 4;
-  string scheduled_at = 5;
-  int32 capacity = 6;
+  string sport = 2;
+  string category = 3;
+  string competition = 4;
+  string title = 5;
+  string description = 6;
+  string start_time = 7;
+  string end_time = 8;
+  string status = 9;
+  string country = 10;
+  string city = 11;
+  string venue = 12;
+  repeated string participants = 13;
+  repeated string tags = 14;
+  string created_at = 15;
+  string updated_at = 16;
 }
 
 message CreateEventRequest {
-  string title = 1;
-  string sport = 2;
-  string venue = 3;
-  string scheduled_at = 4;
-  int32 capacity = 5;
-}
-
-message UpdateEventRequest {
-  string event_id = 1;
-  string title = 2;
-  string sport = 3;
-  string venue = 4;
-  string scheduled_at = 5;
-  int32 capacity = 6;
+  string sport = 1;
+  string category = 2;
+  string competition = 3;
+  string title = 4;
+  string description = 5;
+  string start_time = 6;
+  string end_time = 7;
+  string status = 8;
+  string country = 9;
+  string city = 10;
+  string venue = 11;
+  repeated string participants = 12;
+  repeated string tags = 13;
 }
 
 message GetEventRequest {
@@ -46,8 +52,14 @@ message GetEventRequest {
 
 message ListEventsRequest {
   string sport = 1;
-  int32 page = 2;
-  int32 page_size = 3;
+  string category = 2;
+  string competition = 3;
+  string status = 4;
+  string country = 5;
+  string city = 6;
+  string tag = 7;
+  int32 page = 8;
+  int32 page_size = 9;
 }
 
 message EventResponse {
@@ -58,24 +70,11 @@ message ListEventsResponse {
   repeated Event events = 1;
 }
 
-message JoinEventRequest {
+message DeleteEventRequest {
   string event_id = 1;
-  string user_id = 2;
 }
 
-message LeaveEventRequest {
+message DeleteEventResponse {
   string event_id = 1;
-  string user_id = 2;
-}
-
-message EventActionResponse {
-  string status = 1;
-}
-
-message GetUserEventsRequest {
-  string user_id = 1;
-}
-
-message GetUserEventsResponse {
-  repeated Event events = 1;
+  bool deleted = 2;
 }

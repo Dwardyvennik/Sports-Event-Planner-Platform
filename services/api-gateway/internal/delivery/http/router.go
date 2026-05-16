@@ -30,11 +30,19 @@ type loginRequest struct {
 }
 
 type eventRequest struct {
-	Title       string `json:"title" binding:"required"`
-	Sport       string `json:"sport" binding:"required"`
-	Venue       string `json:"venue" binding:"required"`
-	ScheduledAt string `json:"scheduled_at" binding:"required"`
-	Capacity    int32  `json:"capacity" binding:"required,min=1"`
+	Sport        string   `json:"sport" binding:"required"`
+	Category     string   `json:"category"`
+	Competition  string   `json:"competition"`
+	Title        string   `json:"title" binding:"required"`
+	Description  string   `json:"description"`
+	StartTime    string   `json:"start_time" binding:"required"`
+	EndTime      string   `json:"end_time"`
+	Status       string   `json:"status"`
+	Country      string   `json:"country"`
+	City         string   `json:"city"`
+	Venue        string   `json:"venue"`
+	Participants []string `json:"participants"`
+	Tags         []string `json:"tags"`
 }
 
 type notificationRequest struct {
@@ -70,12 +78,9 @@ func NewRouter(clients *grpc.Clients, checks map[string]health.Checker, log *slo
 	protected.Use(JWTMiddleware(clients.Auth))
 	protected.GET("/auth/me", profileHandler(clients.Auth))
 	protected.POST("/events", createEventHandler(clients.Event))
-	protected.PUT("/events/:id", updateEventHandler(clients.Event))
 	protected.GET("/events/:id", getEventHandler(clients.Event))
 	protected.GET("/events", listEventsHandler(clients.Event))
-	protected.POST("/events/:id/join", joinEventHandler(clients.Event))
-	protected.DELETE("/events/:id/join", leaveEventHandler(clients.Event))
-	protected.GET("/users/:id/events", userEventsHandler(clients.Event))
+	protected.DELETE("/events/:id", deleteEventHandler(clients.Event))
 	protected.POST("/notifications", sendNotificationHandler(clients.Notification))
 	protected.POST("/events/:id/reminders", sendReminderHandler(clients.Notification))
 	protected.GET("/users/:id/notifications", userNotificationsHandler(clients.Notification))
@@ -157,33 +162,19 @@ func createEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 		defer cancel()
 
 		resp, err := client.CreateEvent(ctx, &eventv1.CreateEventRequest{
-			Title:       req.Title,
-			Sport:       req.Sport,
-			Venue:       req.Venue,
-			ScheduledAt: req.ScheduledAt,
-			Capacity:    req.Capacity,
-		})
-		respond(c, resp, err)
-	}
-}
-
-func updateEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var req eventRequest
-		if !bindJSON(c, &req) {
-			return
-		}
-
-		ctx, cancel := timeoutContext(c)
-		defer cancel()
-
-		resp, err := client.UpdateEvent(ctx, &eventv1.UpdateEventRequest{
-			EventId:     c.Param("id"),
-			Title:       req.Title,
-			Sport:       req.Sport,
-			Venue:       req.Venue,
-			ScheduledAt: req.ScheduledAt,
-			Capacity:    req.Capacity,
+			Sport:        req.Sport,
+			Category:     req.Category,
+			Competition:  req.Competition,
+			Title:        req.Title,
+			Description:  req.Description,
+			StartTime:    req.StartTime,
+			EndTime:      req.EndTime,
+			Status:       req.Status,
+			Country:      req.Country,
+			City:         req.City,
+			Venue:        req.Venue,
+			Participants: req.Participants,
+			Tags:         req.Tags,
 		})
 		respond(c, resp, err)
 	}
@@ -208,40 +199,26 @@ func listEventsHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 		defer cancel()
 
 		resp, err := client.ListEvents(ctx, &eventv1.ListEventsRequest{
-			Sport:    c.Query("sport"),
-			Page:     int32(page),
-			PageSize: int32(pageSize),
+			Sport:       c.Query("sport"),
+			Category:    c.Query("category"),
+			Competition: c.Query("competition"),
+			Status:      c.Query("status"),
+			Country:     c.Query("country"),
+			City:        c.Query("city"),
+			Tag:         c.Query("tag"),
+			Page:        int32(page),
+			PageSize:    int32(pageSize),
 		})
 		respond(c, resp, err)
 	}
 }
 
-func joinEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
+func deleteEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := timeoutContext(c)
 		defer cancel()
 
-		resp, err := client.JoinEvent(ctx, &eventv1.JoinEventRequest{EventId: c.Param("id"), UserId: currentUserID(c)})
-		respond(c, resp, err)
-	}
-}
-
-func leaveEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		ctx, cancel := timeoutContext(c)
-		defer cancel()
-
-		resp, err := client.LeaveEvent(ctx, &eventv1.LeaveEventRequest{EventId: c.Param("id"), UserId: currentUserID(c)})
-		respond(c, resp, err)
-	}
-}
-
-func userEventsHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		ctx, cancel := timeoutContext(c)
-		defer cancel()
-
-		resp, err := client.GetUserEvents(ctx, &eventv1.GetUserEventsRequest{UserId: c.Param("id")})
+		resp, err := client.DeleteEvent(ctx, &eventv1.DeleteEventRequest{EventId: c.Param("id")})
 		respond(c, resp, err)
 	}
 }

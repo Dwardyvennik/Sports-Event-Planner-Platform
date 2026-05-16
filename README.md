@@ -31,12 +31,9 @@ Protected with `Authorization: Bearer <token>`:
 
 - `GET /v1/auth/me`
 - `POST /v1/events`
-- `PUT /v1/events/:id`
 - `GET /v1/events/:id`
 - `GET /v1/events`
-- `POST /v1/events/:id/join`
-- `DELETE /v1/events/:id/join`
-- `GET /v1/users/:id/events`
+- `DELETE /v1/events/:id`
 - `POST /v1/notifications`
 - `POST /v1/events/:id/reminders`
 - `GET /v1/users/:id/notifications`
