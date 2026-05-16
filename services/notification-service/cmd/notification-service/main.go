@@ -35,6 +35,10 @@ func main() {
 		}
 	}()
 
+	
+	go container.NotificationUseCase.ReminderWorker(ctx)
+	go container.EventConsumer.Start(ctx)
+
 	grpcServer := grpcx.NewServer(cfg.App.Name, log)
 	deliverygrpc.Register(grpcServer, container.NotificationUseCase, log)
 
