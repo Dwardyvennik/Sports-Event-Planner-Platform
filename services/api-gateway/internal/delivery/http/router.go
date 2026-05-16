@@ -30,19 +30,16 @@ type loginRequest struct {
 }
 
 type eventRequest struct {
-	Sport        string   `json:"sport" binding:"required"`
-	Category     string   `json:"category"`
-	Competition  string   `json:"competition"`
-	Title        string   `json:"title" binding:"required"`
-	Description  string   `json:"description"`
-	StartTime    string   `json:"start_time" binding:"required"`
-	EndTime      string   `json:"end_time"`
-	Status       string   `json:"status"`
-	Country      string   `json:"country"`
-	City         string   `json:"city"`
-	Venue        string   `json:"venue"`
-	Participants []string `json:"participants"`
-	Tags         []string `json:"tags"`
+	Sport       string `json:"sport" binding:"required"`
+	Category    string `json:"category"`
+	Competition string `json:"competition"`
+	Title       string `json:"title" binding:"required"`
+	Description string `json:"description"`
+	StartTime   string `json:"start_time" binding:"required"`
+	EndTime     string `json:"end_time"`
+	Status      string `json:"status"`
+	Country     string `json:"country"`
+	City        string `json:"city"`
 }
 
 type notificationRequest struct {
@@ -162,19 +159,16 @@ func createEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 		defer cancel()
 
 		resp, err := client.CreateEvent(ctx, &eventv1.CreateEventRequest{
-			Sport:        req.Sport,
-			Category:     req.Category,
-			Competition:  req.Competition,
-			Title:        req.Title,
-			Description:  req.Description,
-			StartTime:    req.StartTime,
-			EndTime:      req.EndTime,
-			Status:       req.Status,
-			Country:      req.Country,
-			City:         req.City,
-			Venue:        req.Venue,
-			Participants: req.Participants,
-			Tags:         req.Tags,
+			Sport:       req.Sport,
+			Category:    req.Category,
+			Competition: req.Competition,
+			Title:       req.Title,
+			Description: req.Description,
+			StartTime:   req.StartTime,
+			EndTime:     req.EndTime,
+			Status:      req.Status,
+			Country:     req.Country,
+			City:        req.City,
 		})
 		respond(c, resp, err)
 	}
@@ -199,15 +193,13 @@ func listEventsHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 		defer cancel()
 
 		resp, err := client.ListEvents(ctx, &eventv1.ListEventsRequest{
-			Sport:       c.Query("sport"),
-			Category:    c.Query("category"),
-			Competition: c.Query("competition"),
-			Status:      c.Query("status"),
-			Country:     c.Query("country"),
-			City:        c.Query("city"),
-			Tag:         c.Query("tag"),
-			Page:        int32(page),
-			PageSize:    int32(pageSize),
+			Sport:         c.Query("sport"),
+			Competition:   c.Query("competition"),
+			StartTimeFrom: c.Query("start_time_from"),
+			StartTimeTo:   c.Query("start_time_to"),
+			Country:       c.Query("country"),
+			Page:          int32(page),
+			PageSize:      int32(pageSize),
 		})
 		respond(c, resp, err)
 	}

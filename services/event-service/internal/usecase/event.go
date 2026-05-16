@@ -2,8 +2,6 @@ package usecase
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"strings"
 	"time"
 
@@ -27,31 +25,26 @@ type EventService interface {
 }
 
 type CreateEventInput struct {
-	Sport        string
-	Category     string
-	Competition  string
-	Title        string
-	Description  string
-	StartTime    time.Time
-	EndTime      time.Time
-	Status       string
-	Country      string
-	City         string
-	Venue        string
-	Participants []string
-	Tags         []string
-}
-
-type ListEventsInput struct {
 	Sport       string
 	Category    string
 	Competition string
+	Title       string
+	Description string
+	StartTime   time.Time
+	EndTime     time.Time
 	Status      string
 	Country     string
 	City        string
-	Tag         string
-	Page        int
-	PageSize    int
+}
+
+type ListEventsInput struct {
+	Sport         string
+	Competition   string
+	StartTimeFrom time.Time
+	StartTimeTo   time.Time
+	Country       string
+	Page          int
+	PageSize      int
 }
 
 type EventUseCase struct {
@@ -71,20 +64,16 @@ func (u *EventUseCase) Health(ctx context.Context) error {
 
 func (u *EventUseCase) CreateEvent(ctx context.Context, input CreateEventInput) (*domain.Event, error) {
 	event := &domain.Event{
-		ID:           newEventID(),
-		Sport:        normalize(input.Sport),
-		Category:     normalize(input.Category),
-		Competition:  normalize(input.Competition),
-		Title:        strings.TrimSpace(input.Title),
-		Description:  strings.TrimSpace(input.Description),
-		StartTime:    input.StartTime,
-		EndTime:      input.EndTime,
-		Status:       normalizeStatus(input.Status),
-		Country:      normalize(input.Country),
-		City:         strings.TrimSpace(input.City),
-		Venue:        strings.TrimSpace(input.Venue),
-		Participants: cleanStrings(input.Participants),
-		Tags:         cleanStrings(input.Tags),
+		Sport:       normalize(input.Sport),
+		Category:    normalize(input.Category),
+		Competition: normalize(input.Competition),
+		Title:       strings.TrimSpace(input.Title),
+		Description: strings.TrimSpace(input.Description),
+		StartTime:   input.StartTime,
+		EndTime:     input.EndTime,
+		Status:      normalizeStatus(input.Status),
+		Country:     normalize(input.Country),
+		City:        strings.TrimSpace(input.City),
 	}
 	if err := validateEvent(event); err != nil {
 		return nil, err
@@ -104,6 +93,10 @@ func (u *EventUseCase) GetEvent(ctx context.Context, id string) (*domain.Event, 
 }
 
 func (u *EventUseCase) ListEvents(ctx context.Context, input ListEventsInput) ([]*domain.Event, error) {
+	if !input.StartTimeFrom.IsZero() && !input.StartTimeTo.IsZero() && input.StartTimeTo.Before(input.StartTimeFrom) {
+		return nil, domain.ErrInvalidEvent
+	}
+
 	page := input.Page
 	if page < 1 {
 		page = 1
@@ -117,15 +110,13 @@ func (u *EventUseCase) ListEvents(ctx context.Context, input ListEventsInput) ([
 	}
 
 	return u.events.List(ctx, domain.EventFilter{
-		Sport:       normalize(input.Sport),
-		Category:    normalize(input.Category),
-		Competition: normalize(input.Competition),
-		Status:      normalize(input.Status),
-		Country:     normalize(input.Country),
-		City:        strings.TrimSpace(input.City),
-		Tag:         strings.TrimSpace(input.Tag),
-		Limit:       pageSize,
-		Offset:      (page - 1) * pageSize,
+		Sport:         normalize(input.Sport),
+		Competition:   normalize(input.Competition),
+		StartTimeFrom: input.StartTimeFrom,
+		StartTimeTo:   input.StartTimeTo,
+		Country:       normalize(input.Country),
+		Limit:         pageSize,
+		Offset:        (page - 1) * pageSize,
 	})
 }
 
@@ -157,30 +148,4 @@ func normalizeStatus(status string) string {
 		return "scheduled"
 	}
 	return status
-}
-
-func cleanStrings(values []string) []string {
-	cleaned := make([]string, 0, len(values))
-	seen := make(map[string]struct{}, len(values))
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value == "" {
-			continue
-		}
-		key := strings.ToLower(value)
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		cleaned = append(cleaned, value)
-	}
-	return cleaned
-}
-
-func newEventID() string {
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return "event_" + time.Now().UTC().Format("20060102150405.000000000")
-	}
-	return "event_" + hex.EncodeToString(b[:])
 }

@@ -11,32 +11,27 @@ var (
 )
 
 type Event struct {
-	ID           string
-	Sport        string
-	Category     string
-	Competition  string
-	Title        string
-	Description  string
-	StartTime    time.Time
-	EndTime      time.Time
-	Status       string
-	Country      string
-	City         string
-	Venue        string
-	Participants []string
-	Tags         []string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-}
-
-type EventFilter struct {
+	ID          string
 	Sport       string
 	Category    string
 	Competition string
+	Title       string
+	Description string
+	StartTime   time.Time
+	EndTime     time.Time
 	Status      string
 	Country     string
 	City        string
-	Tag         string
-	Limit       int
-	Offset      int
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type EventFilter struct {
+	Sport         string
+	Competition   string
+	StartTimeFrom time.Time
+	StartTimeTo   time.Time
+	Country       string
+	Limit         int
+	Offset        int
 }

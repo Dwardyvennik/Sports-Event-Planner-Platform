@@ -23,11 +23,8 @@ message Event {
   string status = 9;
   string country = 10;
   string city = 11;
-  string venue = 12;
-  repeated string participants = 13;
-  repeated string tags = 14;
-  string created_at = 15;
-  string updated_at = 16;
+  string created_at = 12;
+  string updated_at = 13;
 }
 
 message CreateEventRequest {
@@ -41,9 +38,6 @@ message CreateEventRequest {
   string status = 8;
   string country = 9;
   string city = 10;
-  string venue = 11;
-  repeated string participants = 12;
-  repeated string tags = 13;
 }
 
 message GetEventRequest {
@@ -52,14 +46,12 @@ message GetEventRequest {
 
 message ListEventsRequest {
   string sport = 1;
-  string category = 2;
-  string competition = 3;
-  string status = 4;
+  string competition = 2;
+  string start_time_from = 3;
+  string start_time_to = 4;
   string country = 5;
-  string city = 6;
-  string tag = 7;
-  int32 page = 8;
-  int32 page_size = 9;
+  int32 page = 6;
+  int32 page_size = 7;
 }
 
 message EventResponse {

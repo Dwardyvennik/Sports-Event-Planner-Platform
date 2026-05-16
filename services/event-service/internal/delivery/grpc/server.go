@@ -45,19 +45,16 @@ func (s *Server) CreateEvent(ctx context.Context, req *eventv1.CreateEventReques
 	}
 
 	event, err := s.events.CreateEvent(ctx, usecase.CreateEventInput{
-		Sport:        req.Sport,
-		Category:     req.Category,
-		Competition:  req.Competition,
-		Title:        req.Title,
-		Description:  req.Description,
-		StartTime:    startTime,
-		EndTime:      endTime,
-		Status:       req.Status,
-		Country:      req.Country,
-		City:         req.City,
-		Venue:        req.Venue,
-		Participants: req.Participants,
-		Tags:         req.Tags,
+		Sport:       req.Sport,
+		Category:    req.Category,
+		Competition: req.Competition,
+		Title:       req.Title,
+		Description: req.Description,
+		StartTime:   startTime,
+		EndTime:     endTime,
+		Status:      req.Status,
+		Country:     req.Country,
+		City:        req.City,
 	})
 	if err != nil {
 		return nil, grpcError(err)
@@ -74,16 +71,23 @@ func (s *Server) GetEvent(ctx context.Context, req *eventv1.GetEventRequest) (*e
 }
 
 func (s *Server) ListEvents(ctx context.Context, req *eventv1.ListEventsRequest) (*eventv1.ListEventsResponse, error) {
+	startTimeFrom, err := parseOptionalTime(req.StartTimeFrom)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "start_time_from must be RFC3339")
+	}
+	startTimeTo, err := parseOptionalTime(req.StartTimeTo)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "start_time_to must be RFC3339")
+	}
+
 	events, err := s.events.ListEvents(ctx, usecase.ListEventsInput{
-		Sport:       req.Sport,
-		Category:    req.Category,
-		Competition: req.Competition,
-		Status:      req.Status,
-		Country:     req.Country,
-		City:        req.City,
-		Tag:         req.Tag,
-		Page:        int(req.Page),
-		PageSize:    int(req.PageSize),
+		Sport:         req.Sport,
+		Competition:   req.Competition,
+		StartTimeFrom: startTimeFrom,
+		StartTimeTo:   startTimeTo,
+		Country:       req.Country,
+		Page:          int(req.Page),
+		PageSize:      int(req.PageSize),
 	})
 	if err != nil {
 		return nil, grpcError(err)
@@ -108,22 +112,19 @@ func eventToProto(event *domain.Event) *eventv1.Event {
 		return nil
 	}
 	return &eventv1.Event{
-		Id:           event.ID,
-		Sport:        event.Sport,
-		Category:     event.Category,
-		Competition:  event.Competition,
-		Title:        event.Title,
-		Description:  event.Description,
-		StartTime:    formatTime(event.StartTime),
-		EndTime:      formatTime(event.EndTime),
-		Status:       event.Status,
-		Country:      event.Country,
-		City:         event.City,
-		Venue:        event.Venue,
-		Participants: append([]string(nil), event.Participants...),
-		Tags:         append([]string(nil), event.Tags...),
-		CreatedAt:    formatTime(event.CreatedAt),
-		UpdatedAt:    formatTime(event.UpdatedAt),
+		Id:          event.ID,
+		Sport:       event.Sport,
+		Category:    event.Category,
+		Competition: event.Competition,
+		Title:       event.Title,
+		Description: event.Description,
+		StartTime:   formatTime(event.StartTime),
+		EndTime:     formatTime(event.EndTime),
+		Status:      event.Status,
+		Country:     event.Country,
+		City:        event.City,
+		CreatedAt:   formatTime(event.CreatedAt),
+		UpdatedAt:   formatTime(event.UpdatedAt),
 	}
 }
 
