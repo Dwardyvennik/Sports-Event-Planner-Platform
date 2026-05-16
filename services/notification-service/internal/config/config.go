@@ -1,15 +1,50 @@
 package config
 
-import sharedconfig "github.com/university/sports-event-planner-platform/pkg/config"
+import (
+	"os"
 
-type Config = sharedconfig.Config
+	sharedconfig "github.com/university/sports-event-planner-platform/pkg/config"
+)
 
-func Load() (Config, error) {
-	return sharedconfig.Load(
+
+type MailgunConfig struct {
+	APIKey string
+	Domain string
+	From   string
+}
+
+
+type NotificationConfig struct {
+	sharedconfig.Config
+	Mailgun MailgunConfig
+}
+
+
+func Load() (NotificationConfig, error) {
+	base, err := sharedconfig.Load(
 		"notification-service",
 		sharedconfig.WithGRPCAddr(":50053"),
 		sharedconfig.WithHTTPAddr(":8083"),
 		sharedconfig.WithPostgres("postgres://notification_user:notification_pass@localhost:5435/notification_db?sslmode=disable"),
 		sharedconfig.WithRabbitMQ(),
 	)
+	if err != nil {
+		return NotificationConfig{}, err
+	}
+
+	return NotificationConfig{
+		Config: base,
+		Mailgun: MailgunConfig{
+			APIKey: envString("MAILGUN_API_KEY", ""),
+			Domain: envString("MAILGUN_DOMAIN", ""),
+			From:   envString("MAILGUN_FROM", "noreply@example.com"),
+		},
+	}, nil
+}
+
+func envString(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
 }
