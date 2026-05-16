@@ -9,7 +9,7 @@ import (
 	"github.com/university/sports-event-planner-platform/pkg/health"
 	sharedpostgres "github.com/university/sports-event-planner-platform/pkg/postgres"
 	"github.com/university/sports-event-planner-platform/services/event-service/internal/config"
-	eventpostgres "github.com/university/sports-event-planner-platform/services/event-service/internal/repository/postgres"
+	eventmemory "github.com/university/sports-event-planner-platform/services/event-service/internal/repository/memory"
 	"github.com/university/sports-event-planner-platform/services/event-service/internal/usecase"
 )
 

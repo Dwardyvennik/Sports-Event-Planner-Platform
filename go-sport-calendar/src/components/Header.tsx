@@ -9,8 +9,8 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
     <header className="header">
       <div className="header-inner">
         <div className="logo">
-          <span className="logo-icon">🏅</span>
-          <span className="logo-text">Go Sport Calendar</span>
+          <span className="logo-icon"></span>
+          <span className="logo-text">Sport Calendar</span>
         </div>
 
         <nav className="nav">
