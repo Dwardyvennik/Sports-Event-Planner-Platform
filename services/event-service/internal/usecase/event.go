@@ -1,11 +1,5 @@
 package usecase
 
-<<<<<<< Updated upstream
-import "context"
-
-type EventRepository interface {
-	Ping(context.Context) error
-=======
 import (
 	"context"
 	"strings"
@@ -51,7 +45,6 @@ type ListEventsInput struct {
 	Country       string
 	Page          int
 	PageSize      int
->>>>>>> Stashed changes
 }
 
 type EventUseCase struct {
@@ -68,8 +61,6 @@ func (u *EventUseCase) Health(ctx context.Context) error {
 	}
 	return u.events.Ping(ctx)
 }
-<<<<<<< Updated upstream
-=======
 
 func (u *EventUseCase) CreateEvent(ctx context.Context, input CreateEventInput) (*domain.Event, error) {
 	event := &domain.Event{
@@ -158,4 +149,3 @@ func normalizeStatus(status string) string {
 	}
 	return status
 }
->>>>>>> Stashed changes

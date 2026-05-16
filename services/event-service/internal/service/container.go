@@ -2,23 +2,12 @@ package service
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-<<<<<<< Updated upstream
-	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/redis/go-redis/v9"
 
 	"github.com/university/sports-event-planner-platform/pkg/health"
 	sharedpostgres "github.com/university/sports-event-planner-platform/pkg/postgres"
-	"github.com/university/sports-event-planner-platform/pkg/rabbitmq"
-	"github.com/university/sports-event-planner-platform/pkg/redisx"
-=======
-
-	"github.com/university/sports-event-planner-platform/pkg/health"
-	sharedpostgres "github.com/university/sports-event-planner-platform/pkg/postgres"
->>>>>>> Stashed changes
 	"github.com/university/sports-event-planner-platform/services/event-service/internal/config"
 	eventpostgres "github.com/university/sports-event-planner-platform/services/event-service/internal/repository/postgres"
 	"github.com/university/sports-event-planner-platform/services/event-service/internal/usecase"
@@ -26,11 +15,6 @@ import (
 
 type Container struct {
 	DB              *pgxpool.Pool
-<<<<<<< Updated upstream
-	Redis           *redis.Client
-	RabbitMQ        *amqp.Connection
-=======
->>>>>>> Stashed changes
 	EventRepository *eventpostgres.EventRepository
 	EventUseCase    *usecase.EventUseCase
 }
@@ -41,38 +25,11 @@ func NewContainer(ctx context.Context, cfg config.Config, log *slog.Logger) (*Co
 		return nil, err
 	}
 
-<<<<<<< Updated upstream
-	cache, err := redisx.Connect(ctx, cfg.Redis)
-	if err != nil {
-		if db != nil {
-			db.Close()
-		}
-		return nil, err
-	}
-
-	broker, err := rabbitmq.Connect(ctx, cfg.RabbitMQ)
-	if err != nil {
-		if cache != nil {
-			_ = cache.Close()
-		}
-		if db != nil {
-			db.Close()
-		}
-		return nil, err
-	}
-
-=======
->>>>>>> Stashed changes
 	events := eventpostgres.NewEventRepository(db)
 	log.Info("event dependencies wired")
 
 	return &Container{
 		DB:              db,
-<<<<<<< Updated upstream
-		Redis:           cache,
-		RabbitMQ:        broker,
-=======
->>>>>>> Stashed changes
 		EventRepository: events,
 		EventUseCase:    usecase.NewEventUseCase(events),
 	}, nil
@@ -81,32 +38,13 @@ func NewContainer(ctx context.Context, cfg config.Config, log *slog.Logger) (*Co
 func (c *Container) Checks() map[string]health.Checker {
 	return map[string]health.Checker{
 		"postgres": sharedpostgres.HealthCheck(c.DB),
-<<<<<<< Updated upstream
-		"redis":    redisx.HealthCheck(c.Redis),
-		"rabbitmq": rabbitmq.HealthCheck(c.RabbitMQ),
-=======
->>>>>>> Stashed changes
 		"usecase":  c.EventUseCase.Health,
 	}
 }
 
 func (c *Container) Close() error {
-<<<<<<< Updated upstream
-	var err error
-	if c.RabbitMQ != nil {
-		err = errors.Join(err, c.RabbitMQ.Close())
-	}
-	if c.Redis != nil {
-		err = errors.Join(err, c.Redis.Close())
-	}
-	if c.DB != nil {
-		c.DB.Close()
-	}
-	return err
-=======
 	if c.DB != nil {
 		c.DB.Close()
 	}
 	return nil
->>>>>>> Stashed changes
 }

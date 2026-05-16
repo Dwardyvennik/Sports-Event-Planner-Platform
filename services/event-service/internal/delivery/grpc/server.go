@@ -2,13 +2,16 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/university/sports-event-planner-platform/services/event-service/internal/domain"
 	"github.com/university/sports-event-planner-platform/services/event-service/internal/usecase"
 	eventv1 "github.com/university/sports-event-planner-platform/services/event-service/proto/event/v1"
 )
@@ -28,32 +31,18 @@ type Server struct {
 }
 
 func (s *Server) CreateEvent(ctx context.Context, req *eventv1.CreateEventRequest) (*eventv1.EventResponse, error) {
-	if strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.Sport) == "" {
-		return nil, status.Error(codes.InvalidArgument, "title and sport are required")
+	if strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.Sport) == "" || strings.TrimSpace(req.StartTime) == "" {
+		return nil, status.Error(codes.InvalidArgument, "title, sport, and start_time are required")
 	}
-	if err := s.events.Health(ctx); err != nil {
-		return nil, status.Error(codes.Unavailable, "event dependencies unavailable")
-	}
-	return &eventv1.EventResponse{Event: eventFromCreate("event_stub", req)}, nil
-}
 
-func (s *Server) UpdateEvent(ctx context.Context, req *eventv1.UpdateEventRequest) (*eventv1.EventResponse, error) {
-	if strings.TrimSpace(req.EventId) == "" {
-		return nil, status.Error(codes.InvalidArgument, "event_id is required")
+	startTime, err := parseTime(req.StartTime)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "start_time must be RFC3339")
 	}
-	if err := s.events.Health(ctx); err != nil {
-		return nil, status.Error(codes.Unavailable, "event dependencies unavailable")
+	endTime, err := parseOptionalTime(req.EndTime)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "end_time must be RFC3339")
 	}
-<<<<<<< Updated upstream
-	return &eventv1.EventResponse{Event: &eventv1.Event{
-		Id:          req.EventId,
-		Title:       req.Title,
-		Sport:       req.Sport,
-		Venue:       req.Venue,
-		ScheduledAt: req.ScheduledAt,
-		Capacity:    req.Capacity,
-	}}, nil
-=======
 
 	event, err := s.events.CreateEvent(ctx, usecase.CreateEventInput{
 		Sport:       req.Sport,
@@ -71,24 +60,17 @@ func (s *Server) UpdateEvent(ctx context.Context, req *eventv1.UpdateEventReques
 		return nil, grpcError(err)
 	}
 	return &eventv1.EventResponse{Event: eventToProto(event)}, nil
->>>>>>> Stashed changes
 }
 
 func (s *Server) GetEvent(ctx context.Context, req *eventv1.GetEventRequest) (*eventv1.EventResponse, error) {
-	if strings.TrimSpace(req.EventId) == "" {
-		return nil, status.Error(codes.InvalidArgument, "event_id is required")
+	event, err := s.events.GetEvent(ctx, req.EventId)
+	if err != nil {
+		return nil, grpcError(err)
 	}
-	if err := s.events.Health(ctx); err != nil {
-		return nil, status.Error(codes.Unavailable, "event dependencies unavailable")
-	}
-	return &eventv1.EventResponse{Event: sampleEvent(req.EventId)}, nil
+	return &eventv1.EventResponse{Event: eventToProto(event)}, nil
 }
 
 func (s *Server) ListEvents(ctx context.Context, req *eventv1.ListEventsRequest) (*eventv1.ListEventsResponse, error) {
-<<<<<<< Updated upstream
-	if err := s.events.Health(ctx); err != nil {
-		return nil, status.Error(codes.Unavailable, "event dependencies unavailable")
-=======
 	startTimeFrom, err := parseOptionalTime(req.StartTimeFrom)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "start_time_from must be RFC3339")
@@ -109,48 +91,27 @@ func (s *Server) ListEvents(ctx context.Context, req *eventv1.ListEventsRequest)
 	})
 	if err != nil {
 		return nil, grpcError(err)
->>>>>>> Stashed changes
 	}
-	return &eventv1.ListEventsResponse{Events: []*eventv1.Event{
-		sampleEvent("event_1"),
-		{Id: "event_2", Title: "Campus Basketball Night", Sport: fallback(req.Sport, "basketball"), Venue: "Main Gym", ScheduledAt: "2026-06-05T18:00:00Z", Capacity: 80},
-	}}, nil
+
+	response := &eventv1.ListEventsResponse{Events: make([]*eventv1.Event, 0, len(events))}
+	for _, event := range events {
+		response.Events = append(response.Events, eventToProto(event))
+	}
+	return response, nil
 }
 
-func (s *Server) JoinEvent(_ context.Context, req *eventv1.JoinEventRequest) (*eventv1.EventActionResponse, error) {
-	if strings.TrimSpace(req.EventId) == "" || strings.TrimSpace(req.UserId) == "" {
-		return nil, status.Error(codes.InvalidArgument, "event_id and user_id are required")
+func (s *Server) DeleteEvent(ctx context.Context, req *eventv1.DeleteEventRequest) (*eventv1.DeleteEventResponse, error) {
+	if err := s.events.DeleteEvent(ctx, req.EventId); err != nil {
+		return nil, grpcError(err)
 	}
-	return &eventv1.EventActionResponse{Status: "joined"}, nil
+	return &eventv1.DeleteEventResponse{EventId: strings.TrimSpace(req.EventId), Deleted: true}, nil
 }
 
-func (s *Server) LeaveEvent(_ context.Context, req *eventv1.LeaveEventRequest) (*eventv1.EventActionResponse, error) {
-	if strings.TrimSpace(req.EventId) == "" || strings.TrimSpace(req.UserId) == "" {
-		return nil, status.Error(codes.InvalidArgument, "event_id and user_id are required")
+func eventToProto(event *domain.Event) *eventv1.Event {
+	if event == nil {
+		return nil
 	}
-	return &eventv1.EventActionResponse{Status: "left"}, nil
-}
-
-func (s *Server) GetUserEvents(ctx context.Context, req *eventv1.GetUserEventsRequest) (*eventv1.GetUserEventsResponse, error) {
-	if strings.TrimSpace(req.UserId) == "" {
-		return nil, status.Error(codes.InvalidArgument, "user_id is required")
-	}
-	if err := s.events.Health(ctx); err != nil {
-		return nil, status.Error(codes.Unavailable, "event dependencies unavailable")
-	}
-	return &eventv1.GetUserEventsResponse{Events: []*eventv1.Event{sampleEvent("event_user_1")}}, nil
-}
-
-func eventFromCreate(id string, req *eventv1.CreateEventRequest) *eventv1.Event {
 	return &eventv1.Event{
-<<<<<<< Updated upstream
-		Id:          id,
-		Title:       req.Title,
-		Sport:       req.Sport,
-		Venue:       req.Venue,
-		ScheduledAt: req.ScheduledAt,
-		Capacity:    req.Capacity,
-=======
 		Id:          event.ID,
 		Sport:       event.Sport,
 		Category:    event.Category,
@@ -164,24 +125,35 @@ func eventFromCreate(id string, req *eventv1.CreateEventRequest) *eventv1.Event 
 		City:        event.City,
 		CreatedAt:   formatTime(event.CreatedAt),
 		UpdatedAt:   formatTime(event.UpdatedAt),
->>>>>>> Stashed changes
 	}
 }
 
-func sampleEvent(id string) *eventv1.Event {
-	return &eventv1.Event{
-		Id:          id,
-		Title:       "University Football Meetup",
-		Sport:       "football",
-		Venue:       "North Field",
-		ScheduledAt: "2026-06-01T16:00:00Z",
-		Capacity:    120,
-	}
+func parseTime(value string) (time.Time, error) {
+	return time.Parse(time.RFC3339, strings.TrimSpace(value))
 }
 
-func fallback(value, fallbackValue string) string {
-	if strings.TrimSpace(value) == "" {
-		return fallbackValue
+func parseOptionalTime(value string) (time.Time, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return time.Time{}, nil
 	}
-	return value
+	return parseTime(value)
+}
+
+func formatTime(value time.Time) string {
+	if value.IsZero() {
+		return ""
+	}
+	return value.UTC().Format(time.RFC3339)
+}
+
+func grpcError(err error) error {
+	switch {
+	case errors.Is(err, domain.ErrInvalidEvent):
+		return status.Error(codes.InvalidArgument, "invalid event")
+	case errors.Is(err, domain.ErrEventNotFound):
+		return status.Error(codes.NotFound, "event not found")
+	default:
+		return status.Error(codes.Internal, "event service error")
+	}
 }
