@@ -16,6 +16,7 @@ service EventService {
 
 message Event {
   string id = 1;
+<<<<<<< Updated upstream
   string title = 2;
   string sport = 3;
   string venue = 4;
@@ -38,6 +39,33 @@ message UpdateEventRequest {
   string venue = 4;
   string scheduled_at = 5;
   int32 capacity = 6;
+=======
+  string sport = 2;
+  string category = 3;
+  string competition = 4;
+  string title = 5;
+  string description = 6;
+  string start_time = 7;
+  string end_time = 8;
+  string status = 9;
+  string country = 10;
+  string city = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+message CreateEventRequest {
+  string sport = 1;
+  string category = 2;
+  string competition = 3;
+  string title = 4;
+  string description = 5;
+  string start_time = 6;
+  string end_time = 7;
+  string status = 8;
+  string country = 9;
+  string city = 10;
+>>>>>>> Stashed changes
 }
 
 message GetEventRequest {
@@ -46,8 +74,17 @@ message GetEventRequest {
 
 message ListEventsRequest {
   string sport = 1;
+<<<<<<< Updated upstream
   int32 page = 2;
   int32 page_size = 3;
+=======
+  string competition = 2;
+  string start_time_from = 3;
+  string start_time_to = 4;
+  string country = 5;
+  int32 page = 6;
+  int32 page_size = 7;
+>>>>>>> Stashed changes
 }
 
 message EventResponse {

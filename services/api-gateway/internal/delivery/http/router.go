@@ -30,11 +30,24 @@ type loginRequest struct {
 }
 
 type eventRequest struct {
+<<<<<<< Updated upstream
 	Title       string `json:"title" binding:"required"`
 	Sport       string `json:"sport" binding:"required"`
 	Venue       string `json:"venue" binding:"required"`
 	ScheduledAt string `json:"scheduled_at" binding:"required"`
 	Capacity    int32  `json:"capacity" binding:"required,min=1"`
+=======
+	Sport       string `json:"sport" binding:"required"`
+	Category    string `json:"category"`
+	Competition string `json:"competition"`
+	Title       string `json:"title" binding:"required"`
+	Description string `json:"description"`
+	StartTime   string `json:"start_time" binding:"required"`
+	EndTime     string `json:"end_time"`
+	Status      string `json:"status"`
+	Country     string `json:"country"`
+	City        string `json:"city"`
+>>>>>>> Stashed changes
 }
 
 type notificationRequest struct {
@@ -157,6 +170,7 @@ func createEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 		defer cancel()
 
 		resp, err := client.CreateEvent(ctx, &eventv1.CreateEventRequest{
+<<<<<<< Updated upstream
 			Title:       req.Title,
 			Sport:       req.Sport,
 			Venue:       req.Venue,
@@ -184,6 +198,18 @@ func updateEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 			Venue:       req.Venue,
 			ScheduledAt: req.ScheduledAt,
 			Capacity:    req.Capacity,
+=======
+			Sport:       req.Sport,
+			Category:    req.Category,
+			Competition: req.Competition,
+			Title:       req.Title,
+			Description: req.Description,
+			StartTime:   req.StartTime,
+			EndTime:     req.EndTime,
+			Status:      req.Status,
+			Country:     req.Country,
+			City:        req.City,
+>>>>>>> Stashed changes
 		})
 		respond(c, resp, err)
 	}
@@ -208,9 +234,19 @@ func listEventsHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 		defer cancel()
 
 		resp, err := client.ListEvents(ctx, &eventv1.ListEventsRequest{
+<<<<<<< Updated upstream
 			Sport:    c.Query("sport"),
 			Page:     int32(page),
 			PageSize: int32(pageSize),
+=======
+			Sport:         c.Query("sport"),
+			Competition:   c.Query("competition"),
+			StartTimeFrom: c.Query("start_time_from"),
+			StartTimeTo:   c.Query("start_time_to"),
+			Country:       c.Query("country"),
+			Page:          int32(page),
+			PageSize:      int32(pageSize),
+>>>>>>> Stashed changes
 		})
 		respond(c, resp, err)
 	}

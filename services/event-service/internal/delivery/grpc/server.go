@@ -44,6 +44,7 @@ func (s *Server) UpdateEvent(ctx context.Context, req *eventv1.UpdateEventReques
 	if err := s.events.Health(ctx); err != nil {
 		return nil, status.Error(codes.Unavailable, "event dependencies unavailable")
 	}
+<<<<<<< Updated upstream
 	return &eventv1.EventResponse{Event: &eventv1.Event{
 		Id:          req.EventId,
 		Title:       req.Title,
@@ -52,6 +53,25 @@ func (s *Server) UpdateEvent(ctx context.Context, req *eventv1.UpdateEventReques
 		ScheduledAt: req.ScheduledAt,
 		Capacity:    req.Capacity,
 	}}, nil
+=======
+
+	event, err := s.events.CreateEvent(ctx, usecase.CreateEventInput{
+		Sport:       req.Sport,
+		Category:    req.Category,
+		Competition: req.Competition,
+		Title:       req.Title,
+		Description: req.Description,
+		StartTime:   startTime,
+		EndTime:     endTime,
+		Status:      req.Status,
+		Country:     req.Country,
+		City:        req.City,
+	})
+	if err != nil {
+		return nil, grpcError(err)
+	}
+	return &eventv1.EventResponse{Event: eventToProto(event)}, nil
+>>>>>>> Stashed changes
 }
 
 func (s *Server) GetEvent(ctx context.Context, req *eventv1.GetEventRequest) (*eventv1.EventResponse, error) {
@@ -65,8 +85,31 @@ func (s *Server) GetEvent(ctx context.Context, req *eventv1.GetEventRequest) (*e
 }
 
 func (s *Server) ListEvents(ctx context.Context, req *eventv1.ListEventsRequest) (*eventv1.ListEventsResponse, error) {
+<<<<<<< Updated upstream
 	if err := s.events.Health(ctx); err != nil {
 		return nil, status.Error(codes.Unavailable, "event dependencies unavailable")
+=======
+	startTimeFrom, err := parseOptionalTime(req.StartTimeFrom)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "start_time_from must be RFC3339")
+	}
+	startTimeTo, err := parseOptionalTime(req.StartTimeTo)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "start_time_to must be RFC3339")
+	}
+
+	events, err := s.events.ListEvents(ctx, usecase.ListEventsInput{
+		Sport:         req.Sport,
+		Competition:   req.Competition,
+		StartTimeFrom: startTimeFrom,
+		StartTimeTo:   startTimeTo,
+		Country:       req.Country,
+		Page:          int(req.Page),
+		PageSize:      int(req.PageSize),
+	})
+	if err != nil {
+		return nil, grpcError(err)
+>>>>>>> Stashed changes
 	}
 	return &eventv1.ListEventsResponse{Events: []*eventv1.Event{
 		sampleEvent("event_1"),
@@ -100,12 +143,28 @@ func (s *Server) GetUserEvents(ctx context.Context, req *eventv1.GetUserEventsRe
 
 func eventFromCreate(id string, req *eventv1.CreateEventRequest) *eventv1.Event {
 	return &eventv1.Event{
+<<<<<<< Updated upstream
 		Id:          id,
 		Title:       req.Title,
 		Sport:       req.Sport,
 		Venue:       req.Venue,
 		ScheduledAt: req.ScheduledAt,
 		Capacity:    req.Capacity,
+=======
+		Id:          event.ID,
+		Sport:       event.Sport,
+		Category:    event.Category,
+		Competition: event.Competition,
+		Title:       event.Title,
+		Description: event.Description,
+		StartTime:   formatTime(event.StartTime),
+		EndTime:     formatTime(event.EndTime),
+		Status:      event.Status,
+		Country:     event.Country,
+		City:        event.City,
+		CreatedAt:   formatTime(event.CreatedAt),
+		UpdatedAt:   formatTime(event.UpdatedAt),
+>>>>>>> Stashed changes
 	}
 }
 
