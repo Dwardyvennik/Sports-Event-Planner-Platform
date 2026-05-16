@@ -36,16 +36,6 @@ services:
       LOG_LEVEL: info
       GRPC_ADDR: :50052
       HTTP_ADDR: :8082
-      DATABASE_URL: postgres://event_user:event_pass@event-postgres:5432/event_db?sslmode=disable
-      REDIS_ADDR: redis:6379
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
-    depends_on:
-      event-postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
     ports:
       - "50052:50052"
       - "8082:8082"

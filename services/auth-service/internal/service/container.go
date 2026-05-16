@@ -44,7 +44,11 @@ func NewContainer(ctx context.Context, cfg config.Config, log *slog.Logger) (*Co
 		DB:             db,
 		Redis:          cache,
 		UserRepository: users,
-		AuthUseCase:    usecase.NewAuthUseCase(users),
+		AuthUseCase: usecase.NewAuthUseCase(users, usecase.Config{
+			JWTSecret:       cfg.Auth.JWTSecret,
+			AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
+			RefreshTokenTTL: cfg.Auth.RefreshTokenTTL,
+		}),
 	}, nil
 }
 

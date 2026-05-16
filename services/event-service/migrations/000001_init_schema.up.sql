@@ -2,23 +2,24 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
     sport TEXT NOT NULL,
-    venue TEXT NOT NULL,
-    scheduled_at TIMESTAMPTZ NOT NULL,
-    capacity INTEGER NOT NULL CHECK (capacity > 0),
+    category TEXT,
+    competition TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ,
+    status TEXT NOT NULL DEFAULT 'scheduled',
+    country TEXT,
+    city TEXT,
+    venue TEXT,
+    participants TEXT[] NOT NULL DEFAULT '{}',
+    tags TEXT[] NOT NULL DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE registrations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL,
-    status TEXT NOT NULL DEFAULT 'registered',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE(event_id, user_id)
-);
-
-CREATE INDEX idx_events_scheduled_at ON events(scheduled_at);
-CREATE INDEX idx_registrations_user_id ON registrations(user_id);
+CREATE INDEX idx_events_start_time ON events(start_time);
+CREATE INDEX idx_events_sport ON events(sport);
+CREATE INDEX idx_events_competition ON events(competition);
+CREATE INDEX idx_events_status ON events(status);
