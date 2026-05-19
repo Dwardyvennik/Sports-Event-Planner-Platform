@@ -4,13 +4,16 @@ SERVICES := auth-service event-service notification-service api-gateway
 MIGRATE_IMAGE := migrate/migrate:v4.17.1
 GO_CACHE ?= /tmp/go-build
 
-.PHONY: tidy test build docker-up docker-down docker-logs migrate-up migrate-down $(SERVICES)
+.PHONY: tidy test test-integration build docker-up docker-down docker-logs migrate-up migrate-down $(SERVICES)
 
 tidy:
 	go mod tidy
 
 test:
 	GOCACHE=$(GO_CACHE) go test -buildvcs=false ./...
+
+test-integration:
+	GOCACHE=$(GO_CACHE) go test -buildvcs=false -tags=integration ./tests/integration
 
 build:
 	@for service in $(SERVICES); do \

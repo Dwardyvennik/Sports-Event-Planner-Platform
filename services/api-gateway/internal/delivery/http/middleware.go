@@ -70,7 +70,8 @@ func JWTMiddleware(auth authv1.AuthServiceClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")
 		if !strings.HasPrefix(header, "Bearer ") {
-			c.AbortWithStatusJSON(nethttp.StatusUnauthorized, gin.H{"error": "missing bearer token"})
+			writeAPIError(c, nethttp.StatusUnauthorized, errorUnauthorized, "missing bearer token")
+			c.Abort()
 			return
 		}
 
@@ -81,7 +82,8 @@ func JWTMiddleware(auth authv1.AuthServiceClient) gin.HandlerFunc {
 			Token: strings.TrimPrefix(header, "Bearer "),
 		})
 		if err != nil || !resp.Valid {
-			c.AbortWithStatusJSON(nethttp.StatusUnauthorized, gin.H{"error": "invalid token"})
+			writeAPIError(c, nethttp.StatusUnauthorized, errorInvalidToken, "invalid token")
+			c.Abort()
 			return
 		}
 

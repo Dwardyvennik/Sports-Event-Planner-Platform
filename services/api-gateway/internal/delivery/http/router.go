@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/university/sports-event-planner-platform/pkg/health"
 	"github.com/university/sports-event-planner-platform/services/api-gateway/internal/delivery/grpc"
@@ -348,7 +346,7 @@ func userNotificationsHandler(client notificationv1.NotificationServiceClient) g
 
 func bindJSON(c *gin.Context, target any) bool {
 	if err := c.ShouldBindJSON(target); err != nil {
-		c.JSON(nethttp.StatusBadRequest, gin.H{"error": err.Error()})
+		writeAPIError(c, nethttp.StatusBadRequest, errorInvalidRequest, err.Error())
 		return false
 	}
 	return true
@@ -356,30 +354,10 @@ func bindJSON(c *gin.Context, target any) bool {
 
 func respond(c *gin.Context, payload any, err error) {
 	if err != nil {
-		c.JSON(statusCodeFromGRPC(err), gin.H{"error": err.Error()})
+		writeGRPCError(c, err)
 		return
 	}
 	c.JSON(nethttp.StatusOK, payload)
-}
-
-func statusCodeFromGRPC(err error) int {
-	code := status.Code(err)
-	switch code {
-	case codes.InvalidArgument:
-		return nethttp.StatusBadRequest
-	case codes.Unauthenticated:
-		return nethttp.StatusUnauthorized
-	case codes.PermissionDenied:
-		return nethttp.StatusForbidden
-	case codes.NotFound:
-		return nethttp.StatusNotFound
-	case codes.Unavailable, codes.DeadlineExceeded:
-		return nethttp.StatusServiceUnavailable
-	case codes.FailedPrecondition:
-		return nethttp.StatusConflict
-	default:
-		return nethttp.StatusBadGateway
-	}
 }
 
 func timeoutContext(c *gin.Context) (context.Context, context.CancelFunc) {

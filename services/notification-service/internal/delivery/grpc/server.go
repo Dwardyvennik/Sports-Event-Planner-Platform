@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/university/sports-event-planner-platform/services/notification-service/internal/domain"
 	"github.com/university/sports-event-planner-platform/services/notification-service/internal/usecase"
 	notificationv1 "github.com/university/sports-event-planner-platform/services/notification-service/proto/notification/v1"
 )
@@ -42,7 +44,7 @@ func (s *Server) SendNotification(ctx context.Context, req *notificationv1.SendN
 
 	if err := s.notifications.SendNotification(ctx, input); err != nil {
 		s.log.Error("SendNotification rpc", "error", err)
-		return nil, status.Errorf(codes.Internal, "send notification: %v", err)
+		return nil, grpcError(err)
 	}
 
 	return &notificationv1.NotificationResponse{
@@ -74,7 +76,7 @@ func (s *Server) SendReminder(ctx context.Context, req *notificationv1.SendRemin
 
 	if err := s.notifications.SendReminder(ctx, input); err != nil {
 		s.log.Error("SendReminder rpc", "error", err)
-		return nil, status.Errorf(codes.Internal, "send reminder: %v", err)
+		return nil, grpcError(err)
 	}
 
 	return &notificationv1.NotificationResponse{
@@ -91,7 +93,7 @@ func (s *Server) GetNotifications(ctx context.Context, req *notificationv1.GetNo
 	notifications, err := s.notifications.GetNotifications(ctx, req.UserId)
 	if err != nil {
 		s.log.Error("GetNotifications rpc", "error", err)
-		return nil, status.Errorf(codes.Internal, "get notifications: %v", err)
+		return nil, grpcError(err)
 	}
 
 	var pbNotifications []*notificationv1.Notification
@@ -108,4 +110,15 @@ func (s *Server) GetNotifications(ctx context.Context, req *notificationv1.GetNo
 	return &notificationv1.GetNotificationsResponse{
 		Notifications: pbNotifications,
 	}, nil
+}
+
+func grpcError(err error) error {
+	switch {
+	case errors.Is(err, domain.ErrInvalidNotification):
+		return status.Error(codes.InvalidArgument, "invalid notification")
+	case errors.Is(err, domain.ErrNotificationNotFound):
+		return status.Error(codes.NotFound, "notification not found")
+	default:
+		return status.Error(codes.Internal, "notification service error")
+	}
 }

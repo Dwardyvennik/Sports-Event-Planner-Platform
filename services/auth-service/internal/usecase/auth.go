@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -251,12 +252,17 @@ func (u *AuthUseCase) issueTokens(ctx context.Context, user *domain.User) (*Auth
 
 func (u *AuthUseCase) signToken(user *domain.User, ttl time.Duration) (string, error) {
 	now := time.Now().UTC()
+	tokenID, err := newTokenID()
+	if err != nil {
+		return "", err
+	}
 	claims := authClaims{
 		UserID: user.ID,
 		Email:  user.Email,
 		Role:   user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   user.ID,
+			ID:        tokenID,
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 		},
@@ -302,4 +308,12 @@ func normalizeRole(role string) string {
 func hashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
+}
+
+func newTokenID() (string, error) {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(buf), nil
 }

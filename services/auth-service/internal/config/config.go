@@ -47,7 +47,20 @@ func Load() (Config, error) {
 			AccessTokenTTL:  accessTTL,
 			RefreshTokenTTL: refreshTTL,
 		},
-	}, nil
+	}.validate()
+}
+
+func (cfg Config) validate() (Config, error) {
+	if cfg.Auth.JWTSecret == "" {
+		return cfg, fmt.Errorf("JWT_SECRET is required")
+	}
+	if cfg.Auth.AccessTokenTTL <= 0 {
+		return cfg, fmt.Errorf("JWT_ACCESS_TTL must be positive")
+	}
+	if cfg.Auth.RefreshTokenTTL <= 0 {
+		return cfg, fmt.Errorf("JWT_REFRESH_TTL must be positive")
+	}
+	return cfg, nil
 }
 
 func envString(key, fallback string) string {

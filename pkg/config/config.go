@@ -126,6 +126,12 @@ func Load(serviceName string, options ...Option) (Config, error) {
 	if cfg.Postgres.Enabled && cfg.Postgres.URL == "" {
 		return cfg, fmt.Errorf("DATABASE_URL is required when postgres is enabled")
 	}
+	if cfg.Redis.Enabled && cfg.Redis.Addr == "" {
+		return cfg, fmt.Errorf("REDIS_ADDR is required when redis is enabled")
+	}
+	if cfg.NATS.Enabled && cfg.NATS.URL == "" {
+		return cfg, fmt.Errorf("NATS_URL is required when nats is enabled")
+	}
 
 	return cfg, nil
 }
