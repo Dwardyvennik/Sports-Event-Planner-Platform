@@ -2,4 +2,4 @@
 set -eu
 
 docker compose up --build -d
-printf '%s\n' "Platform started. Run './scripts/migrate.sh up' after databases are healthy."
+printf '%s\n' "Platform started. Database migrations run through docker-compose."

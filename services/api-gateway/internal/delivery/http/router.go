@@ -29,17 +29,23 @@ type loginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type refreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
 type eventRequest struct {
-	Sport       string `json:"sport" binding:"required"`
-	Category    string `json:"category"`
-	Competition string `json:"competition"`
-	Title       string `json:"title" binding:"required"`
-	Description string `json:"description"`
-	StartTime   string `json:"start_time" binding:"required"`
-	EndTime     string `json:"end_time"`
-	Status      string `json:"status"`
-	Country     string `json:"country"`
-	City        string `json:"city"`
+	Sport           string `json:"sport" binding:"required"`
+	Category        string `json:"category"`
+	Competition     string `json:"competition"`
+	Title           string `json:"title" binding:"required"`
+	Description     string `json:"description"`
+	Location        string `json:"location"`
+	StartTime       string `json:"start_time" binding:"required"`
+	EndTime         string `json:"end_time"`
+	Status          string `json:"status"`
+	Country         string `json:"country"`
+	City            string `json:"city"`
+	MaxParticipants int32  `json:"max_participants"`
 }
 
 type notificationRequest struct {
@@ -70,6 +76,7 @@ func NewRouter(clients *grpc.Clients, checks map[string]health.Checker, log *slo
 	v1 := router.Group("/v1")
 	v1.POST("/auth/register", registerHandler(clients.Auth))
 	v1.POST("/auth/login", loginHandler(clients.Auth))
+	v1.POST("/auth/refresh", refreshTokenHandler(clients.Auth))
 
 	protected := v1.Group("")
 	protected.Use(JWTMiddleware(clients.Auth))
@@ -77,7 +84,10 @@ func NewRouter(clients *grpc.Clients, checks map[string]health.Checker, log *slo
 	protected.POST("/events", createEventHandler(clients.Event))
 	protected.GET("/events/:id", getEventHandler(clients.Event))
 	protected.GET("/events", listEventsHandler(clients.Event))
+	protected.PUT("/events/:id", updateEventHandler(clients.Event))
 	protected.DELETE("/events/:id", deleteEventHandler(clients.Event))
+	protected.POST("/events/:id/join", joinEventHandler(clients.Event))
+	protected.POST("/events/:id/leave", leaveEventHandler(clients.Event))
 	protected.POST("/notifications", sendNotificationHandler(clients.Notification))
 	protected.POST("/events/:id/reminders", sendReminderHandler(clients.Notification))
 	protected.GET("/users/:id/notifications", userNotificationsHandler(clients.Notification))
@@ -138,6 +148,21 @@ func loginHandler(client authv1.AuthServiceClient) gin.HandlerFunc {
 	}
 }
 
+func refreshTokenHandler(client authv1.AuthServiceClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req refreshTokenRequest
+		if !bindJSON(c, &req) {
+			return
+		}
+
+		ctx, cancel := timeoutContext(c)
+		defer cancel()
+
+		resp, err := client.RefreshToken(ctx, &authv1.RefreshTokenRequest{RefreshToken: req.RefreshToken})
+		respond(c, resp, err)
+	}
+}
+
 func profileHandler(client authv1.AuthServiceClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := timeoutContext(c)
@@ -159,16 +184,19 @@ func createEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 		defer cancel()
 
 		resp, err := client.CreateEvent(ctx, &eventv1.CreateEventRequest{
-			Sport:       req.Sport,
-			Category:    req.Category,
-			Competition: req.Competition,
-			Title:       req.Title,
-			Description: req.Description,
-			StartTime:   req.StartTime,
-			EndTime:     req.EndTime,
-			Status:      req.Status,
-			Country:     req.Country,
-			City:        req.City,
+			Sport:           req.Sport,
+			Category:        req.Category,
+			Competition:     req.Competition,
+			Title:           req.Title,
+			Description:     req.Description,
+			Location:        req.Location,
+			StartTime:       req.StartTime,
+			EndTime:         req.EndTime,
+			Status:          req.Status,
+			Country:         req.Country,
+			City:            req.City,
+			CreatorId:       currentUserID(c),
+			MaxParticipants: req.MaxParticipants,
 		})
 		respond(c, resp, err)
 	}
@@ -200,6 +228,39 @@ func listEventsHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 			Country:       c.Query("country"),
 			Page:          int32(page),
 			PageSize:      int32(pageSize),
+			Category:      c.Query("category"),
+			Status:        c.Query("status"),
+			City:          c.Query("city"),
+		})
+		respond(c, resp, err)
+	}
+}
+
+func updateEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req eventRequest
+		if !bindJSON(c, &req) {
+			return
+		}
+
+		ctx, cancel := timeoutContext(c)
+		defer cancel()
+
+		resp, err := client.UpdateEvent(ctx, &eventv1.UpdateEventRequest{
+			Id:              c.Param("id"),
+			UserId:          currentUserID(c),
+			Sport:           req.Sport,
+			Category:        req.Category,
+			Competition:     req.Competition,
+			Title:           req.Title,
+			Description:     req.Description,
+			Location:        req.Location,
+			StartTime:       req.StartTime,
+			EndTime:         req.EndTime,
+			Status:          req.Status,
+			Country:         req.Country,
+			City:            req.City,
+			MaxParticipants: req.MaxParticipants,
 		})
 		respond(c, resp, err)
 	}
@@ -210,7 +271,27 @@ func deleteEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 		ctx, cancel := timeoutContext(c)
 		defer cancel()
 
-		resp, err := client.DeleteEvent(ctx, &eventv1.DeleteEventRequest{EventId: c.Param("id")})
+		resp, err := client.DeleteEvent(ctx, &eventv1.DeleteEventRequest{EventId: c.Param("id"), UserId: currentUserID(c)})
+		respond(c, resp, err)
+	}
+}
+
+func joinEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := timeoutContext(c)
+		defer cancel()
+
+		resp, err := client.JoinEvent(ctx, &eventv1.EventMembershipRequest{EventId: c.Param("id"), UserId: currentUserID(c)})
+		respond(c, resp, err)
+	}
+}
+
+func leaveEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := timeoutContext(c)
+		defer cancel()
+
+		resp, err := client.LeaveEvent(ctx, &eventv1.EventMembershipRequest{EventId: c.Param("id"), UserId: currentUserID(c)})
 		respond(c, resp, err)
 	}
 }
@@ -294,6 +375,8 @@ func statusCodeFromGRPC(err error) int {
 		return nethttp.StatusNotFound
 	case codes.Unavailable, codes.DeadlineExceeded:
 		return nethttp.StatusServiceUnavailable
+	case codes.FailedPrecondition:
+		return nethttp.StatusConflict
 	default:
 		return nethttp.StatusBadGateway
 	}

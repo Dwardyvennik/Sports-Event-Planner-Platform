@@ -5,12 +5,10 @@ import (
 	"time"
 )
 
-
 const (
 	ChannelEmail = "email"
 	ChannelMock  = "mock"
 )
-
 
 const (
 	StatusPending = "pending"
@@ -18,12 +16,10 @@ const (
 	StatusFailed  = "failed"
 )
 
-
 var (
 	ErrNotificationNotFound = errors.New("notification not found")
 	ErrInvalidNotification  = errors.New("invalid notification")
 )
-
 
 type Notification struct {
 	ID        string
@@ -35,7 +31,6 @@ type Notification struct {
 	CreatedAt time.Time
 	SentAt    *time.Time
 }
-
 
 type Reminder struct {
 	ID          string

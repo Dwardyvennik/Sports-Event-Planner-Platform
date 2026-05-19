@@ -45,16 +45,19 @@ func (s *Server) CreateEvent(ctx context.Context, req *eventv1.CreateEventReques
 	}
 
 	event, err := s.events.CreateEvent(ctx, usecase.CreateEventInput{
-		Sport:       req.Sport,
-		Category:    req.Category,
-		Competition: req.Competition,
-		Title:       req.Title,
-		Description: req.Description,
-		StartTime:   startTime,
-		EndTime:     endTime,
-		Status:      req.Status,
-		Country:     req.Country,
-		City:        req.City,
+		CreatorID:       req.CreatorId,
+		Sport:           req.Sport,
+		Category:        req.Category,
+		Competition:     req.Competition,
+		Title:           req.Title,
+		Description:     req.Description,
+		Location:        req.Location,
+		StartTime:       startTime,
+		EndTime:         endTime,
+		Status:          req.Status,
+		Country:         req.Country,
+		City:            req.City,
+		MaxParticipants: req.MaxParticipants,
 	})
 	if err != nil {
 		return nil, grpcError(err)
@@ -82,10 +85,13 @@ func (s *Server) ListEvents(ctx context.Context, req *eventv1.ListEventsRequest)
 
 	events, err := s.events.ListEvents(ctx, usecase.ListEventsInput{
 		Sport:         req.Sport,
+		Category:      req.Category,
 		Competition:   req.Competition,
+		Status:        req.Status,
 		StartTimeFrom: startTimeFrom,
 		StartTimeTo:   startTimeTo,
 		Country:       req.Country,
+		City:          req.City,
 		Page:          int(req.Page),
 		PageSize:      int(req.PageSize),
 	})
@@ -101,8 +107,8 @@ func (s *Server) ListEvents(ctx context.Context, req *eventv1.ListEventsRequest)
 }
 
 func (s *Server) UpdateEvent(ctx context.Context, req *eventv1.UpdateEventRequest) (*eventv1.EventResponse, error) {
-	if strings.TrimSpace(req.Id) == "" || strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.Sport) == "" || strings.TrimSpace(req.StartTime) == "" {
-		return nil, status.Error(codes.InvalidArgument, "id, title, sport, and start_time are required")
+	if strings.TrimSpace(req.Id) == "" || strings.TrimSpace(req.UserId) == "" || strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.Sport) == "" || strings.TrimSpace(req.StartTime) == "" {
+		return nil, status.Error(codes.InvalidArgument, "id, user_id, title, sport, and start_time are required")
 	}
 
 	startTime, err := parseTime(req.StartTime)
@@ -115,11 +121,18 @@ func (s *Server) UpdateEvent(ctx context.Context, req *eventv1.UpdateEventReques
 	}
 
 	event, err := s.events.UpdateEvent(ctx, req.Id, usecase.CreateEventInput{
+		CreatorID:       req.UserId,
 		Sport:           req.Sport,
+		Category:        req.Category,
+		Competition:     req.Competition,
 		Title:           req.Title,
+		Description:     req.Description,
 		Location:        req.Location,
 		StartTime:       startTime,
 		EndTime:         endTime,
+		Status:          req.Status,
+		Country:         req.Country,
+		City:            req.City,
 		MaxParticipants: req.MaxParticipants,
 	})
 	if err != nil {
@@ -129,10 +142,26 @@ func (s *Server) UpdateEvent(ctx context.Context, req *eventv1.UpdateEventReques
 }
 
 func (s *Server) DeleteEvent(ctx context.Context, req *eventv1.DeleteEventRequest) (*eventv1.DeleteEventResponse, error) {
-	if err := s.events.DeleteEvent(ctx, req.EventId); err != nil {
+	if err := s.events.DeleteEvent(ctx, req.EventId, req.UserId); err != nil {
 		return nil, grpcError(err)
 	}
 	return &eventv1.DeleteEventResponse{EventId: strings.TrimSpace(req.EventId), Deleted: true}, nil
+}
+
+func (s *Server) JoinEvent(ctx context.Context, req *eventv1.EventMembershipRequest) (*eventv1.EventResponse, error) {
+	event, err := s.events.JoinEvent(ctx, req.EventId, req.UserId)
+	if err != nil {
+		return nil, grpcError(err)
+	}
+	return &eventv1.EventResponse{Event: eventToProto(event)}, nil
+}
+
+func (s *Server) LeaveEvent(ctx context.Context, req *eventv1.EventMembershipRequest) (*eventv1.EventResponse, error) {
+	event, err := s.events.LeaveEvent(ctx, req.EventId, req.UserId)
+	if err != nil {
+		return nil, grpcError(err)
+	}
+	return &eventv1.EventResponse{Event: eventToProto(event)}, nil
 }
 
 func eventToProto(event *domain.Event) *eventv1.Event {
@@ -140,19 +169,23 @@ func eventToProto(event *domain.Event) *eventv1.Event {
 		return nil
 	}
 	return &eventv1.Event{
-		Id:          event.ID,
-		Sport:       event.Sport,
-		Category:    event.Category,
-		Competition: event.Competition,
-		Title:       event.Title,
-		Description: event.Description,
-		StartTime:   formatTime(event.StartTime),
-		EndTime:     formatTime(event.EndTime),
-		Status:      event.Status,
-		Country:     event.Country,
-		City:        event.City,
-		CreatedAt:   formatTime(event.CreatedAt),
-		UpdatedAt:   formatTime(event.UpdatedAt),
+		Id:                event.ID,
+		Sport:             event.Sport,
+		Category:          event.Category,
+		Competition:       event.Competition,
+		Title:             event.Title,
+		Description:       event.Description,
+		StartTime:         formatTime(event.StartTime),
+		EndTime:           formatTime(event.EndTime),
+		Status:            event.Status,
+		Country:           event.Country,
+		City:              event.City,
+		CreatedAt:         formatTime(event.CreatedAt),
+		UpdatedAt:         formatTime(event.UpdatedAt),
+		CreatorId:         event.CreatorID,
+		Location:          event.Location,
+		MaxParticipants:   event.MaxParticipants,
+		ParticipantsCount: event.ParticipantsCount,
 	}
 }
 
@@ -181,6 +214,10 @@ func grpcError(err error) error {
 		return status.Error(codes.InvalidArgument, "invalid event")
 	case errors.Is(err, domain.ErrEventNotFound):
 		return status.Error(codes.NotFound, "event not found")
+	case errors.Is(err, domain.ErrEventForbidden):
+		return status.Error(codes.PermissionDenied, "event forbidden")
+	case errors.Is(err, domain.ErrEventFull):
+		return status.Error(codes.FailedPrecondition, "event is full")
 	default:
 		return status.Error(codes.Internal, "event service error")
 	}

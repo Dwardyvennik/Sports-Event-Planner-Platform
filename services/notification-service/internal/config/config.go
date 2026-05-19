@@ -6,19 +6,16 @@ import (
 	sharedconfig "github.com/university/sports-event-planner-platform/pkg/config"
 )
 
-
 type MailgunConfig struct {
 	APIKey string
 	Domain string
 	From   string
 }
 
-
 type NotificationConfig struct {
 	sharedconfig.Config
 	Mailgun MailgunConfig
 }
-
 
 func Load() (NotificationConfig, error) {
 	base, err := sharedconfig.Load(
@@ -26,7 +23,7 @@ func Load() (NotificationConfig, error) {
 		sharedconfig.WithGRPCAddr(":50053"),
 		sharedconfig.WithHTTPAddr(":8083"),
 		sharedconfig.WithPostgres("postgres://notification_user:notification_pass@localhost:5435/notification_db?sslmode=disable"),
-		sharedconfig.WithRabbitMQ(),
+		sharedconfig.WithNATS(),
 	)
 	if err != nil {
 		return NotificationConfig{}, err

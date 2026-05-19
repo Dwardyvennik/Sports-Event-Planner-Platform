@@ -17,14 +17,12 @@ func NewNotificationRepository(pool *pgxpool.Pool) *NotificationRepository {
 	return &NotificationRepository{pool: pool}
 }
 
-
 func (r *NotificationRepository) Ping(ctx context.Context) error {
 	if r.pool == nil {
 		return nil
 	}
 	return r.pool.Ping(ctx)
 }
-
 
 func (r *NotificationRepository) SaveNotification(ctx context.Context, n *domain.Notification) error {
 	query := `
@@ -41,7 +39,6 @@ func (r *NotificationRepository) SaveNotification(ctx context.Context, n *domain
 		n.SentAt,
 	).Scan(&n.ID, &n.CreatedAt)
 }
-
 
 func (r *NotificationRepository) GetUserNotifications(ctx context.Context, userID string) ([]*domain.Notification, error) {
 	query := `
@@ -76,7 +73,6 @@ func (r *NotificationRepository) GetUserNotifications(ctx context.Context, userI
 	return notifications, rows.Err()
 }
 
-
 func (r *NotificationRepository) SaveReminder(ctx context.Context, rem *domain.Reminder) error {
 	query := `
 		INSERT INTO reminders (event_id, user_id, message, scheduled_at, status)
@@ -91,7 +87,6 @@ func (r *NotificationRepository) SaveReminder(ctx context.Context, rem *domain.R
 		rem.Status,
 	).Scan(&rem.ID, &rem.CreatedAt)
 }
-
 
 func (r *NotificationRepository) GetPendingReminders(ctx context.Context, before time.Time) ([]*domain.Reminder, error) {
 	query := `
@@ -123,7 +118,6 @@ func (r *NotificationRepository) GetPendingReminders(ctx context.Context, before
 	}
 	return reminders, rows.Err()
 }
-
 
 func (r *NotificationRepository) UpdateReminderStatus(ctx context.Context, id, status string) error {
 	query := `UPDATE reminders SET status = $1 WHERE id = $2`

@@ -35,7 +35,6 @@ func main() {
 		}
 	}()
 
-	
 	go container.NotificationUseCase.ReminderWorker(ctx)
 	go container.EventConsumer.Start(ctx)
 

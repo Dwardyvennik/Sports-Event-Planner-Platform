@@ -16,6 +16,8 @@ type EventServiceClient interface {
 	ListEvents(ctx context.Context, in *ListEventsRequest, opts ...grpc.CallOption) (*ListEventsResponse, error)
 	UpdateEvent(ctx context.Context, in *UpdateEventRequest, opts ...grpc.CallOption) (*EventResponse, error)
 	DeleteEvent(ctx context.Context, in *DeleteEventRequest, opts ...grpc.CallOption) (*DeleteEventResponse, error)
+	JoinEvent(ctx context.Context, in *EventMembershipRequest, opts ...grpc.CallOption) (*EventResponse, error)
+	LeaveEvent(ctx context.Context, in *EventMembershipRequest, opts ...grpc.CallOption) (*EventResponse, error)
 }
 
 type eventServiceClient struct {
@@ -71,12 +73,32 @@ func (c *eventServiceClient) DeleteEvent(ctx context.Context, in *DeleteEventReq
 	return out, nil
 }
 
+func (c *eventServiceClient) JoinEvent(ctx context.Context, in *EventMembershipRequest, opts ...grpc.CallOption) (*EventResponse, error) {
+	out := new(EventResponse)
+	err := c.cc.Invoke(ctx, "/sports.event.v1.EventService/JoinEvent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eventServiceClient) LeaveEvent(ctx context.Context, in *EventMembershipRequest, opts ...grpc.CallOption) (*EventResponse, error) {
+	out := new(EventResponse)
+	err := c.cc.Invoke(ctx, "/sports.event.v1.EventService/LeaveEvent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type EventServiceServer interface {
 	CreateEvent(context.Context, *CreateEventRequest) (*EventResponse, error)
 	GetEvent(context.Context, *GetEventRequest) (*EventResponse, error)
 	ListEvents(context.Context, *ListEventsRequest) (*ListEventsResponse, error)
 	UpdateEvent(context.Context, *UpdateEventRequest) (*EventResponse, error)
 	DeleteEvent(context.Context, *DeleteEventRequest) (*DeleteEventResponse, error)
+	JoinEvent(context.Context, *EventMembershipRequest) (*EventResponse, error)
+	LeaveEvent(context.Context, *EventMembershipRequest) (*EventResponse, error)
 }
 
 type UnimplementedEventServiceServer struct{}
@@ -95,6 +117,12 @@ func (UnimplementedEventServiceServer) UpdateEvent(context.Context, *UpdateEvent
 }
 func (UnimplementedEventServiceServer) DeleteEvent(context.Context, *DeleteEventRequest) (*DeleteEventResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteEvent not implemented")
+}
+func (UnimplementedEventServiceServer) JoinEvent(context.Context, *EventMembershipRequest) (*EventResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method JoinEvent not implemented")
+}
+func (UnimplementedEventServiceServer) LeaveEvent(context.Context, *EventMembershipRequest) (*EventResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LeaveEvent not implemented")
 }
 
 func RegisterEventServiceServer(s grpc.ServiceRegistrar, srv EventServiceServer) {
@@ -176,6 +204,36 @@ func _EventService_DeleteEvent_Handler(srv any, ctx context.Context, dec func(an
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventService_JoinEvent_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
+	in := new(EventMembershipRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventServiceServer).JoinEvent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/sports.event.v1.EventService/JoinEvent"}
+	handler := func(ctx context.Context, req any) (any, error) {
+		return srv.(EventServiceServer).JoinEvent(ctx, req.(*EventMembershipRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EventService_LeaveEvent_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
+	in := new(EventMembershipRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventServiceServer).LeaveEvent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/sports.event.v1.EventService/LeaveEvent"}
+	handler := func(ctx context.Context, req any) (any, error) {
+		return srv.(EventServiceServer).LeaveEvent(ctx, req.(*EventMembershipRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var EventService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: EventService_ServiceDescName,
 	HandlerType: (*EventServiceServer)(nil),
@@ -185,6 +243,8 @@ var EventService_ServiceDesc = grpc.ServiceDesc{
 		{MethodName: "ListEvents", Handler: _EventService_ListEvents_Handler},
 		{MethodName: "UpdateEvent", Handler: _EventService_UpdateEvent_Handler},
 		{MethodName: "DeleteEvent", Handler: _EventService_DeleteEvent_Handler},
+		{MethodName: "JoinEvent", Handler: _EventService_JoinEvent_Handler},
+		{MethodName: "LeaveEvent", Handler: _EventService_LeaveEvent_Handler},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "services/event-service/proto/event/v1/event.proto",

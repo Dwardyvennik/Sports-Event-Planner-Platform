@@ -28,7 +28,6 @@ type Server struct {
 	log           *slog.Logger
 }
 
-
 func (s *Server) SendNotification(ctx context.Context, req *notificationv1.SendNotificationRequest) (*notificationv1.NotificationResponse, error) {
 	if strings.TrimSpace(req.UserId) == "" || strings.TrimSpace(req.Subject) == "" {
 		return nil, status.Error(codes.InvalidArgument, "user_id and subject are required")
@@ -47,18 +46,17 @@ func (s *Server) SendNotification(ctx context.Context, req *notificationv1.SendN
 	}
 
 	return &notificationv1.NotificationResponse{
-		NotificationId: req.UserId, 
+		NotificationId: req.UserId,
 		Status:         "sent",
 	}, nil
 }
-
 
 func (s *Server) SendReminder(ctx context.Context, req *notificationv1.SendReminderRequest) (*notificationv1.NotificationResponse, error) {
 	if strings.TrimSpace(req.EventId) == "" || strings.TrimSpace(req.UserId) == "" {
 		return nil, status.Error(codes.InvalidArgument, "event_id and user_id are required")
 	}
 
-	scheduledAt := time.Now().Add(time.Hour) 
+	scheduledAt := time.Now().Add(time.Hour)
 	if req.ScheduledAt != "" {
 		parsed, err := time.Parse(time.RFC3339, req.ScheduledAt)
 		if err != nil {
@@ -84,7 +82,6 @@ func (s *Server) SendReminder(ctx context.Context, req *notificationv1.SendRemin
 		Status:         "scheduled",
 	}, nil
 }
-
 
 func (s *Server) GetNotifications(ctx context.Context, req *notificationv1.GetNotificationsRequest) (*notificationv1.GetNotificationsResponse, error) {
 	if strings.TrimSpace(req.UserId) == "" {
@@ -112,4 +109,3 @@ func (s *Server) GetNotifications(ctx context.Context, req *notificationv1.GetNo
 		Notifications: pbNotifications,
 	}, nil
 }
-

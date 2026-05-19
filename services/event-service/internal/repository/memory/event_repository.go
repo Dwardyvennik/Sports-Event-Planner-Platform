@@ -11,12 +11,16 @@ import (
 )
 
 type EventRepository struct {
-	mu     sync.RWMutex
-	events map[string]*domain.Event
+	mu           sync.RWMutex
+	events       map[string]*domain.Event
+	participants map[string]map[string]struct{}
 }
 
 func NewEventRepository() *EventRepository {
-	return &EventRepository{events: make(map[string]*domain.Event)}
+	return &EventRepository{
+		events:       make(map[string]*domain.Event),
+		participants: make(map[string]map[string]struct{}),
+	}
 }
 
 func (r *EventRepository) Ping(context.Context) error {
@@ -42,7 +46,7 @@ func (r *EventRepository) Get(_ context.Context, id string) (*domain.Event, erro
 	if !ok {
 		return nil, domain.ErrEventNotFound
 	}
-	return cloneEvent(event), nil
+	return r.cloneWithCount(event), nil
 }
 
 func (r *EventRepository) List(_ context.Context, filter domain.EventFilter) ([]*domain.Event, error) {
@@ -52,7 +56,7 @@ func (r *EventRepository) List(_ context.Context, filter domain.EventFilter) ([]
 	events := make([]*domain.Event, 0, len(r.events))
 	for _, event := range r.events {
 		if matchesFilter(event, filter) {
-			events = append(events, cloneEvent(event))
+			events = append(events, r.cloneWithCount(event))
 		}
 	}
 
@@ -73,15 +77,74 @@ func (r *EventRepository) List(_ context.Context, filter domain.EventFilter) ([]
 	return events[filter.Offset:end], nil
 }
 
-func (r *EventRepository) Delete(_ context.Context, id string) error {
+func (r *EventRepository) Update(_ context.Context, event *domain.Event) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, ok := r.events[id]; !ok {
+	existing, ok := r.events[event.ID]
+	if !ok {
 		return domain.ErrEventNotFound
 	}
-	delete(r.events, id)
+	if existing.CreatorID != event.CreatorID {
+		return domain.ErrEventForbidden
+	}
+	count := int32(len(r.participants[event.ID]))
+	if event.MaxParticipants > 0 && count > event.MaxParticipants {
+		return domain.ErrEventFull
+	}
+	event.CreatedAt = existing.CreatedAt
+	event.UpdatedAt = time.Now().UTC()
+	r.events[event.ID] = cloneEvent(event)
 	return nil
+}
+
+func (r *EventRepository) Delete(_ context.Context, id string, userID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	event, ok := r.events[id]
+	if !ok {
+		return domain.ErrEventNotFound
+	}
+	if event.CreatorID != userID {
+		return domain.ErrEventForbidden
+	}
+	delete(r.events, id)
+	delete(r.participants, id)
+	return nil
+}
+
+func (r *EventRepository) Join(_ context.Context, id string, userID string) (*domain.Event, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	event, ok := r.events[id]
+	if !ok {
+		return nil, domain.ErrEventNotFound
+	}
+	if r.participants[id] == nil {
+		r.participants[id] = map[string]struct{}{}
+	}
+	if _, ok := r.participants[id][userID]; ok {
+		return r.cloneWithCount(event), nil
+	}
+	if event.MaxParticipants > 0 && int32(len(r.participants[id])) >= event.MaxParticipants {
+		return nil, domain.ErrEventFull
+	}
+	r.participants[id][userID] = struct{}{}
+	return r.cloneWithCount(event), nil
+}
+
+func (r *EventRepository) Leave(_ context.Context, id string, userID string) (*domain.Event, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	event, ok := r.events[id]
+	if !ok {
+		return nil, domain.ErrEventNotFound
+	}
+	delete(r.participants[id], userID)
+	return r.cloneWithCount(event), nil
 }
 
 func matchesFilter(event *domain.Event, filter domain.EventFilter) bool {
@@ -103,19 +166,13 @@ func matchesFilter(event *domain.Event, filter domain.EventFilter) bool {
 	if filter.City != "" && !strings.EqualFold(event.City, filter.City) {
 		return false
 	}
-	if filter.Tag != "" && !hasValue(event.Tags, filter.Tag) {
-		return false
-	}
 	return true
 }
 
-func hasValue(values []string, target string) bool {
-	for _, value := range values {
-		if strings.EqualFold(value, target) {
-			return true
-		}
-	}
-	return false
+func (r *EventRepository) cloneWithCount(event *domain.Event) *domain.Event {
+	clone := cloneEvent(event)
+	clone.ParticipantsCount = int32(len(r.participants[event.ID]))
+	return clone
 }
 
 func cloneEvent(event *domain.Event) *domain.Event {
@@ -123,7 +180,5 @@ func cloneEvent(event *domain.Event) *domain.Event {
 		return nil
 	}
 	clone := *event
-	clone.Participants = append([]string(nil), event.Participants...)
-	clone.Tags = append([]string(nil), event.Tags...)
 	return &clone
 }

@@ -6,12 +6,12 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/university/sports-event-planner-platform/pkg/health"
+	"github.com/university/sports-event-planner-platform/pkg/natsx"
 	sharedpostgres "github.com/university/sports-event-planner-platform/pkg/postgres"
-	"github.com/university/sports-event-planner-platform/pkg/rabbitmq"
 	"github.com/university/sports-event-planner-platform/pkg/redisx"
 	"github.com/university/sports-event-planner-platform/services/event-service/internal/config"
 	eventpostgres "github.com/university/sports-event-planner-platform/services/event-service/internal/repository/postgres"
@@ -21,7 +21,7 @@ import (
 type Container struct {
 	DB              *pgxpool.Pool
 	Redis           *redis.Client
-	RabbitMQ        *amqp.Connection
+	NATS            *nats.Conn
 	EventRepository *eventpostgres.EventRepository
 	EventUseCase    *usecase.EventUseCase
 }
@@ -38,9 +38,9 @@ func NewContainer(ctx context.Context, cfg config.Config, log *slog.Logger) (*Co
 		cache = nil
 	}
 
-	broker, err := rabbitmq.Connect(ctx, cfg.RabbitMQ)
+	broker, err := natsx.Connect(ctx, cfg.NATS)
 	if err != nil {
-		log.Warn("rabbitmq unavailable, event publisher disabled", "error", err)
+		log.Warn("nats unavailable, event publisher disabled", "error", err)
 		broker = nil
 	}
 
@@ -50,9 +50,9 @@ func NewContainer(ctx context.Context, cfg config.Config, log *slog.Logger) (*Co
 	return &Container{
 		DB:              db,
 		Redis:           cache,
-		RabbitMQ:        broker,
+		NATS:            broker,
 		EventRepository: events,
-		EventUseCase:    usecase.NewEventUseCase(events, cache, broker),
+		EventUseCase:    usecase.NewEventUseCase(events, cache, broker, log),
 	}, nil
 }
 
@@ -60,7 +60,7 @@ func (c *Container) Checks() map[string]health.Checker {
 	return map[string]health.Checker{
 		"postgres": sharedpostgres.HealthCheck(c.DB),
 		"redis":    redisx.HealthCheck(c.Redis),
-		"rabbitmq": rabbitmq.HealthCheck(c.RabbitMQ),
+		"nats":     natsx.HealthCheck(c.NATS),
 		"usecase":  c.EventUseCase.Health,
 	}
 }
@@ -70,8 +70,8 @@ func (c *Container) Close() error {
 	if c.Redis != nil {
 		err = errors.Join(err, c.Redis.Close())
 	}
-	if c.RabbitMQ != nil {
-		err = errors.Join(err, c.RabbitMQ.Close())
+	if c.NATS != nil {
+		err = errors.Join(err, natsx.Drain(c.NATS))
 	}
 	if c.DB != nil {
 		c.DB.Close()

@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
-	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/nats-io/nats.go"
 
+	"github.com/university/sports-event-planner-platform/services/notification-service/internal/domain"
 	"github.com/university/sports-event-planner-platform/services/notification-service/internal/usecase"
 )
 
-const queueName = "event.created"
+const eventCreatedSubject = "events.created"
 
 type eventCreatedMessage struct {
 	EventID   string `json:"event_id"`
@@ -22,12 +24,12 @@ type eventCreatedMessage struct {
 }
 
 type EventConsumer struct {
-	conn          *amqp.Connection
+	conn          *nats.Conn
 	notifications *usecase.NotificationUseCase
 	log           *slog.Logger
 }
 
-func NewEventConsumer(conn *amqp.Connection, notifications *usecase.NotificationUseCase, log *slog.Logger) *EventConsumer {
+func NewEventConsumer(conn *nats.Conn, notifications *usecase.NotificationUseCase, log *slog.Logger) *EventConsumer {
 	return &EventConsumer{
 		conn:          conn,
 		notifications: notifications,
@@ -37,80 +39,50 @@ func NewEventConsumer(conn *amqp.Connection, notifications *usecase.Notification
 
 func (c *EventConsumer) Start(ctx context.Context) {
 	if c.conn == nil {
-		c.log.Warn("rabbitmq not connected, event consumer disabled")
+		c.log.Warn("nats not connected, event consumer disabled")
 		return
 	}
 
-	ch, err := c.conn.Channel()
+	sub, err := c.conn.Subscribe(eventCreatedSubject, func(msg *nats.Msg) {
+		c.handle(ctx, msg)
+	})
 	if err != nil {
-		c.log.Error("open rabbitmq channel", "error", err)
+		c.log.Error("subscribe to nats subject", "subject", eventCreatedSubject, "error", err)
 		return
 	}
-	defer ch.Close()
+	defer sub.Unsubscribe()
 
-	if _, err := ch.QueueDeclare(
-		queueName,
-		true,
-		false,
-		false,
-		false,
-		nil,
-	); err != nil {
-		c.log.Error("declare queue", "queue", queueName, "error", err)
-		return
+	c.log.Info("event consumer started", "subject", eventCreatedSubject)
+	<-ctx.Done()
+
+	if err := sub.Drain(); err != nil {
+		c.log.Warn("drain nats subscription", "subject", eventCreatedSubject, "error", err)
 	}
-
-	msgs, err := ch.Consume(
-		queueName,
-		"notification-service",
-		false,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		c.log.Error("start consuming", "queue", queueName, "error", err)
-		return
-	}
-
-	c.log.Info("event consumer started", "queue", queueName)
-
-	for {
-		select {
-		case <-ctx.Done():
-			c.log.Info("event consumer stopped")
-			return
-		case msg, ok := <-msgs:
-			if !ok {
-				c.log.Warn("rabbitmq channel closed")
-				return
-			}
-			c.handle(ctx, msg)
-		}
-	}
+	c.log.Info("event consumer stopped")
 }
 
-func (c *EventConsumer) handle(ctx context.Context, msg amqp.Delivery) {
+func (c *EventConsumer) handle(ctx context.Context, msg *nats.Msg) {
 	var payload eventCreatedMessage
-	if err := json.Unmarshal(msg.Body, &payload); err != nil {
-		c.log.Error("unmarshal event.created message", "error", err, "body", string(msg.Body))
-		_ = msg.Nack(false, false)
+	if err := json.Unmarshal(msg.Data, &payload); err != nil {
+		c.log.Error("unmarshal events.created message", "error", err, "body", string(msg.Data))
 		return
 	}
 
 	input := usecase.SendNotificationInput{
 		UserID:  payload.UserID,
-		Channel: "mock",
+		Channel: domain.ChannelMock,
 		Subject: fmt.Sprintf("New event: %s", payload.Title),
 		Body:    fmt.Sprintf("A new %s event starts at %s", payload.Sport, payload.StartTime),
 	}
 
-	if err := c.notifications.SendNotification(ctx, input); err != nil {
-		c.log.Error("send notification for event.created", "error", err, "event_id", payload.EventID)
-		_ = msg.Nack(false, true)
+	for attempt := 1; attempt <= 3; attempt++ {
+		if err := c.notifications.SendNotification(ctx, input); err != nil {
+			c.log.Warn("send notification for events.created failed", "error", err, "event_id", payload.EventID, "attempt", attempt)
+			time.Sleep(time.Duration(attempt) * 200 * time.Millisecond)
+			continue
+		}
 		return
 	}
 
-	_ = msg.Ack(false)
+	c.log.Error("send notification for events.created exhausted retries", "event_id", payload.EventID, "user_id", payload.UserID)
 }

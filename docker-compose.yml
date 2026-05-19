@@ -14,9 +14,10 @@ services:
       HTTP_ADDR: :8081
       DATABASE_URL: postgres://auth_user:auth_pass@auth-postgres:5432/auth_db?sslmode=disable
       REDIS_ADDR: redis:6379
+      JWT_SECRET: docker-auth-secret-change-me
     depends_on:
-      auth-postgres:
-        condition: service_healthy
+      auth-migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     ports:
@@ -37,8 +38,14 @@ services:
       GRPC_ADDR: :50052
       HTTP_ADDR: :8082
       DATABASE_URL: postgres://event_user:event_pass@event-postgres:5432/event_db?sslmode=disable
+      REDIS_ADDR: redis:6379
+      NATS_URL: nats://nats:4222
     depends_on:
-      event-postgres:
+      event-migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      nats:
         condition: service_healthy
     ports:
       - "50052:50052"
@@ -58,11 +65,11 @@ services:
       GRPC_ADDR: :50053
       HTTP_ADDR: :8083
       DATABASE_URL: postgres://notification_user:notification_pass@notification-postgres:5432/notification_db?sslmode=disable
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      NATS_URL: nats://nats:4222
     depends_on:
-      notification-postgres:
-        condition: service_healthy
-      rabbitmq:
+      notification-migrate:
+        condition: service_completed_successfully
+      nats:
         condition: service_healthy
     ports:
       - "50053:50053"
@@ -110,6 +117,20 @@ services:
     networks:
       - sports-platform
 
+  auth-migrate:
+    image: migrate/migrate:v4.17.1
+    command:
+      - -path=/migrations
+      - -database=postgres://auth_user:auth_pass@auth-postgres:5432/auth_db?sslmode=disable
+      - up
+    volumes:
+      - ./services/auth-service/migrations:/migrations:ro
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+    networks:
+      - sports-platform
+
   event-postgres:
     image: postgres:16-alpine
     environment:
@@ -125,6 +146,20 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - sports-platform
+
+  event-migrate:
+    image: migrate/migrate:v4.17.1
+    command:
+      - -path=/migrations
+      - -database=postgres://event_user:event_pass@event-postgres:5432/event_db?sslmode=disable
+      - up
+    volumes:
+      - ./services/event-service/migrations:/migrations:ro
+    depends_on:
+      event-postgres:
+        condition: service_healthy
     networks:
       - sports-platform
 
@@ -146,6 +181,20 @@ services:
     networks:
       - sports-platform
 
+  notification-migrate:
+    image: migrate/migrate:v4.17.1
+    command:
+      - -path=/migrations
+      - -database=postgres://notification_user:notification_pass@notification-postgres:5432/notification_db?sslmode=disable
+      - up
+    volumes:
+      - ./services/notification-service/migrations:/migrations:ro
+    depends_on:
+      notification-postgres:
+        condition: service_healthy
+    networks:
+      - sports-platform
+
   redis:
     image: redis:7-alpine
     ports:
@@ -158,15 +207,16 @@ services:
     networks:
       - sports-platform
 
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
+  nats:
+    image: nats:2.10-alpine
+    command: ["-m", "8222"]
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "4222:4222"
+      - "8222:8222"
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
       retries: 10
     networks:
       - sports-platform

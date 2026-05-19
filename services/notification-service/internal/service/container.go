@@ -6,11 +6,11 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/nats-io/nats.go"
 
 	"github.com/university/sports-event-planner-platform/pkg/health"
+	"github.com/university/sports-event-planner-platform/pkg/natsx"
 	sharedpostgres "github.com/university/sports-event-planner-platform/pkg/postgres"
-	"github.com/university/sports-event-planner-platform/pkg/rabbitmq"
 	"github.com/university/sports-event-planner-platform/services/notification-service/internal/config"
 	"github.com/university/sports-event-planner-platform/services/notification-service/internal/consumer"
 	"github.com/university/sports-event-planner-platform/services/notification-service/internal/mailgun"
@@ -20,7 +20,7 @@ import (
 
 type Container struct {
 	DB                     *pgxpool.Pool
-	RabbitMQ               *amqp.Connection
+	NATS                   *nats.Conn
 	NotificationRepository *notificationpostgres.NotificationRepository
 	NotificationUseCase    *usecase.NotificationUseCase
 	EventConsumer          *consumer.EventConsumer
@@ -32,12 +32,10 @@ func NewContainer(ctx context.Context, cfg config.NotificationConfig, log *slog.
 		return nil, err
 	}
 
-	broker, err := rabbitmq.Connect(ctx, cfg.RabbitMQ)
+	broker, err := natsx.Connect(ctx, cfg.NATS)
 	if err != nil {
-		if db != nil {
-			db.Close()
-		}
-		return nil, err
+		log.Warn("nats unavailable, event consumer disabled", "error", err)
+		broker = nil
 	}
 
 	mg := mailgun.NewClient(cfg.Mailgun.APIKey, cfg.Mailgun.Domain, cfg.Mailgun.From)
@@ -51,7 +49,7 @@ func NewContainer(ctx context.Context, cfg config.NotificationConfig, log *slog.
 
 	return &Container{
 		DB:                     db,
-		RabbitMQ:               broker,
+		NATS:                   broker,
 		NotificationRepository: notifications,
 		NotificationUseCase:    uc,
 		EventConsumer:          ec,
@@ -61,15 +59,15 @@ func NewContainer(ctx context.Context, cfg config.NotificationConfig, log *slog.
 func (c *Container) Checks() map[string]health.Checker {
 	return map[string]health.Checker{
 		"postgres": sharedpostgres.HealthCheck(c.DB),
-		"rabbitmq": rabbitmq.HealthCheck(c.RabbitMQ),
+		"nats":     natsx.HealthCheck(c.NATS),
 		"usecase":  c.NotificationUseCase.Health,
 	}
 }
 
 func (c *Container) Close() error {
 	var err error
-	if c.RabbitMQ != nil {
-		err = errors.Join(err, c.RabbitMQ.Close())
+	if c.NATS != nil {
+		err = errors.Join(err, natsx.Drain(c.NATS))
 	}
 	if c.DB != nil {
 		c.DB.Close()

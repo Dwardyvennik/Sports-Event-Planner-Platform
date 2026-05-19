@@ -10,7 +10,6 @@ import (
 	"github.com/university/sports-event-planner-platform/services/notification-service/internal/mailgun"
 )
 
-
 type NotificationRepository interface {
 	Ping(context.Context) error
 	SaveNotification(ctx context.Context, n *domain.Notification) error
@@ -20,14 +19,12 @@ type NotificationRepository interface {
 	UpdateReminderStatus(ctx context.Context, id, status string) error
 }
 
-
 type SendNotificationInput struct {
 	UserID  string
 	Channel string
 	Subject string
 	Body    string
 }
-
 
 type SendReminderInput struct {
 	EventID     string
@@ -36,13 +33,11 @@ type SendReminderInput struct {
 	ScheduledAt time.Time
 }
 
-
 type NotificationUseCase struct {
 	notifications NotificationRepository
 	mailgun       *mailgun.Client
 	log           *slog.Logger
 }
-
 
 func NewNotificationUseCase(notifications NotificationRepository, mg *mailgun.Client, log *slog.Logger) *NotificationUseCase {
 	return &NotificationUseCase{
@@ -52,14 +47,12 @@ func NewNotificationUseCase(notifications NotificationRepository, mg *mailgun.Cl
 	}
 }
 
-
 func (u *NotificationUseCase) Health(ctx context.Context) error {
 	if u.notifications == nil {
 		return nil
 	}
 	return u.notifications.Ping(ctx)
 }
-
 
 func (u *NotificationUseCase) SendNotification(ctx context.Context, input SendNotificationInput) error {
 	if input.UserID == "" || input.Subject == "" {
@@ -108,7 +101,6 @@ func (u *NotificationUseCase) SendNotification(ctx context.Context, input SendNo
 	return sendErr
 }
 
-
 func (u *NotificationUseCase) SendReminder(ctx context.Context, input SendReminderInput) error {
 	if input.EventID == "" || input.UserID == "" {
 		return domain.ErrInvalidNotification
@@ -126,7 +118,6 @@ func (u *NotificationUseCase) SendReminder(ctx context.Context, input SendRemind
 		return fmt.Errorf("save reminder: %w", err)
 	}
 
-	
 	if time.Until(input.ScheduledAt) <= time.Hour {
 		u.log.Info("Reminder: "+input.Message+" for event "+input.EventID,
 			"user_id", input.UserID,
@@ -140,11 +131,9 @@ func (u *NotificationUseCase) SendReminder(ctx context.Context, input SendRemind
 	return nil
 }
 
-
 func (u *NotificationUseCase) GetNotifications(ctx context.Context, userID string) ([]*domain.Notification, error) {
 	return u.notifications.GetUserNotifications(ctx, userID)
 }
-
 
 func (u *NotificationUseCase) ReminderWorker(ctx context.Context) {
 	ticker := time.NewTicker(time.Minute)
@@ -181,7 +170,6 @@ func (u *NotificationUseCase) processPendingReminders(ctx context.Context, now t
 		}
 	}
 }
-
 
 func (u *NotificationUseCase) logMock(userID, subject, body string) {
 	u.log.Info("[MOCK NOTIFICATION]",

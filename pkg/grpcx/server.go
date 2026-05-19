@@ -6,6 +6,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
@@ -14,10 +16,43 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var (
+	grpcServerRequests = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "sports_planner",
+		Subsystem: "grpc_server",
+		Name:      "requests_total",
+		Help:      "Total number of gRPC server requests.",
+	}, []string{"service", "method", "code"})
+
+	grpcServerDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "sports_planner",
+		Subsystem: "grpc_server",
+		Name:      "request_duration_seconds",
+		Help:      "gRPC server request duration.",
+		Buckets:   prometheus.DefBuckets,
+	}, []string{"service", "method"})
+
+	grpcClientRequests = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "sports_planner",
+		Subsystem: "grpc_client",
+		Name:      "requests_total",
+		Help:      "Total number of gRPC client requests.",
+	}, []string{"method", "code"})
+
+	grpcClientDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "sports_planner",
+		Subsystem: "grpc_client",
+		Name:      "request_duration_seconds",
+		Help:      "gRPC client request duration.",
+		Buckets:   prometheus.DefBuckets,
+	}, []string{"method"})
+)
+
 func NewServer(service string, log *slog.Logger) *grpc.Server {
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			recoveryInterceptor(log),
+			unaryMetricsInterceptor(service),
 			unaryLoggingInterceptor(log),
 		),
 	)
@@ -46,6 +81,9 @@ func UnaryClientLoggingInterceptor(log *slog.Logger) grpc.UnaryClientInterceptor
 	return func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		started := time.Now()
 		err := invoker(ctx, method, req, reply, cc, opts...)
+		code := status.Code(err).String()
+		grpcClientRequests.WithLabelValues(method, code).Inc()
+		grpcClientDuration.WithLabelValues(method).Observe(time.Since(started).Seconds())
 		if err != nil {
 			log.WarnContext(ctx, "grpc client request failed",
 				"method", method,
@@ -59,6 +97,17 @@ func UnaryClientLoggingInterceptor(log *slog.Logger) grpc.UnaryClientInterceptor
 			"duration_ms", time.Since(started).Milliseconds(),
 		)
 		return nil
+	}
+}
+
+func unaryMetricsInterceptor(service string) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		started := time.Now()
+		response, err := handler(ctx, req)
+		code := status.Code(err).String()
+		grpcServerRequests.WithLabelValues(service, info.FullMethod, code).Inc()
+		grpcServerDuration.WithLabelValues(service, info.FullMethod).Observe(time.Since(started).Seconds())
+		return response, err
 	}
 }
 

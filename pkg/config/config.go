@@ -13,7 +13,7 @@ type Config struct {
 	HTTP      HTTPConfig
 	Postgres  PostgresConfig
 	Redis     RedisConfig
-	RabbitMQ  RabbitMQConfig
+	NATS      NATSConfig
 	Endpoints ServiceEndpoints
 }
 
@@ -46,7 +46,7 @@ type RedisConfig struct {
 	DB       int
 }
 
-type RabbitMQConfig struct {
+type NATSConfig struct {
 	Enabled bool
 	URL     string
 }
@@ -73,8 +73,8 @@ func Load(serviceName string, options ...Option) (Config, error) {
 			Addr: "localhost:6379",
 			DB:   0,
 		},
-		RabbitMQ: RabbitMQConfig{
-			URL: "amqp://guest:guest@localhost:5672/",
+		NATS: NATSConfig{
+			URL: "nats://localhost:4222",
 		},
 		Endpoints: ServiceEndpoints{},
 	}
@@ -117,7 +117,7 @@ func Load(serviceName string, options ...Option) (Config, error) {
 	}
 	cfg.Redis.DB = redisDB
 
-	cfg.RabbitMQ.URL = envString("RABBITMQ_URL", cfg.RabbitMQ.URL)
+	cfg.NATS.URL = envString("NATS_URL", cfg.NATS.URL)
 
 	for name, addr := range cfg.Endpoints {
 		cfg.Endpoints[name] = envString(endpointEnvName(name), addr)
@@ -155,9 +155,9 @@ func WithRedis() Option {
 	}
 }
 
-func WithRabbitMQ() Option {
+func WithNATS() Option {
 	return func(cfg *Config) {
-		cfg.RabbitMQ.Enabled = true
+		cfg.NATS.Enabled = true
 	}
 }
 
