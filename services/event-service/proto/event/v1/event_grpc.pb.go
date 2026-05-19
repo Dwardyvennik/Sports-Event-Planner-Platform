@@ -14,6 +14,7 @@ type EventServiceClient interface {
 	CreateEvent(ctx context.Context, in *CreateEventRequest, opts ...grpc.CallOption) (*EventResponse, error)
 	GetEvent(ctx context.Context, in *GetEventRequest, opts ...grpc.CallOption) (*EventResponse, error)
 	ListEvents(ctx context.Context, in *ListEventsRequest, opts ...grpc.CallOption) (*ListEventsResponse, error)
+	UpdateEvent(ctx context.Context, in *UpdateEventRequest, opts ...grpc.CallOption) (*EventResponse, error)
 	DeleteEvent(ctx context.Context, in *DeleteEventRequest, opts ...grpc.CallOption) (*DeleteEventResponse, error)
 }
 
@@ -52,6 +53,15 @@ func (c *eventServiceClient) ListEvents(ctx context.Context, in *ListEventsReque
 	return out, nil
 }
 
+func (c *eventServiceClient) UpdateEvent(ctx context.Context, in *UpdateEventRequest, opts ...grpc.CallOption) (*EventResponse, error) {
+	out := new(EventResponse)
+	err := c.cc.Invoke(ctx, "/sports.event.v1.EventService/UpdateEvent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eventServiceClient) DeleteEvent(ctx context.Context, in *DeleteEventRequest, opts ...grpc.CallOption) (*DeleteEventResponse, error) {
 	out := new(DeleteEventResponse)
 	err := c.cc.Invoke(ctx, "/sports.event.v1.EventService/DeleteEvent", in, out, opts...)
@@ -65,6 +75,7 @@ type EventServiceServer interface {
 	CreateEvent(context.Context, *CreateEventRequest) (*EventResponse, error)
 	GetEvent(context.Context, *GetEventRequest) (*EventResponse, error)
 	ListEvents(context.Context, *ListEventsRequest) (*ListEventsResponse, error)
+	UpdateEvent(context.Context, *UpdateEventRequest) (*EventResponse, error)
 	DeleteEvent(context.Context, *DeleteEventRequest) (*DeleteEventResponse, error)
 }
 
@@ -78,6 +89,9 @@ func (UnimplementedEventServiceServer) GetEvent(context.Context, *GetEventReques
 }
 func (UnimplementedEventServiceServer) ListEvents(context.Context, *ListEventsRequest) (*ListEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListEvents not implemented")
+}
+func (UnimplementedEventServiceServer) UpdateEvent(context.Context, *UpdateEventRequest) (*EventResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateEvent not implemented")
 }
 func (UnimplementedEventServiceServer) DeleteEvent(context.Context, *DeleteEventRequest) (*DeleteEventResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteEvent not implemented")
@@ -132,6 +146,21 @@ func _EventService_ListEvents_Handler(srv any, ctx context.Context, dec func(any
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventService_UpdateEvent_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
+	in := new(UpdateEventRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventServiceServer).UpdateEvent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/sports.event.v1.EventService/UpdateEvent"}
+	handler := func(ctx context.Context, req any) (any, error) {
+		return srv.(EventServiceServer).UpdateEvent(ctx, req.(*UpdateEventRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EventService_DeleteEvent_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(DeleteEventRequest)
 	if err := dec(in); err != nil {
@@ -154,6 +183,7 @@ var EventService_ServiceDesc = grpc.ServiceDesc{
 		{MethodName: "CreateEvent", Handler: _EventService_CreateEvent_Handler},
 		{MethodName: "GetEvent", Handler: _EventService_GetEvent_Handler},
 		{MethodName: "ListEvents", Handler: _EventService_ListEvents_Handler},
+		{MethodName: "UpdateEvent", Handler: _EventService_UpdateEvent_Handler},
 		{MethodName: "DeleteEvent", Handler: _EventService_DeleteEvent_Handler},
 	},
 	Streams:  []grpc.StreamDesc{},

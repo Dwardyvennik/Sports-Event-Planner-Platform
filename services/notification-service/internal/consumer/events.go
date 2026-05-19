@@ -13,21 +13,19 @@ import (
 
 const queueName = "event.created"
 
-
 type eventCreatedMessage struct {
 	EventID   string `json:"event_id"`
+	UserID    string `json:"user_id"`
 	Title     string `json:"title"`
 	Sport     string `json:"sport"`
 	StartTime string `json:"start_time"`
 }
-
 
 type EventConsumer struct {
 	conn          *amqp.Connection
 	notifications *usecase.NotificationUseCase
 	log           *slog.Logger
 }
-
 
 func NewEventConsumer(conn *amqp.Connection, notifications *usecase.NotificationUseCase, log *slog.Logger) *EventConsumer {
 	return &EventConsumer{
@@ -36,7 +34,6 @@ func NewEventConsumer(conn *amqp.Connection, notifications *usecase.Notification
 		log:           log,
 	}
 }
-
 
 func (c *EventConsumer) Start(ctx context.Context) {
 	if c.conn == nil {
@@ -51,13 +48,12 @@ func (c *EventConsumer) Start(ctx context.Context) {
 	}
 	defer ch.Close()
 
-	
 	if _, err := ch.QueueDeclare(
 		queueName,
-		true,  
-		false, 
-		false, 
-		false, 
+		true,
+		false,
+		false,
+		false,
 		nil,
 	); err != nil {
 		c.log.Error("declare queue", "queue", queueName, "error", err)
@@ -66,8 +62,8 @@ func (c *EventConsumer) Start(ctx context.Context) {
 
 	msgs, err := ch.Consume(
 		queueName,
-		"notification-service", 
-		false,                  
+		"notification-service",
+		false,
 		false,
 		false,
 		false,
@@ -99,12 +95,12 @@ func (c *EventConsumer) handle(ctx context.Context, msg amqp.Delivery) {
 	var payload eventCreatedMessage
 	if err := json.Unmarshal(msg.Body, &payload); err != nil {
 		c.log.Error("unmarshal event.created message", "error", err, "body", string(msg.Body))
-		_ = msg.Nack(false, false) 
+		_ = msg.Nack(false, false)
 		return
 	}
 
 	input := usecase.SendNotificationInput{
-		UserID:  payload.EventID, 
+		UserID:  payload.UserID,
 		Channel: "mock",
 		Subject: fmt.Sprintf("New event: %s", payload.Title),
 		Body:    fmt.Sprintf("A new %s event starts at %s", payload.Sport, payload.StartTime),
@@ -112,7 +108,7 @@ func (c *EventConsumer) handle(ctx context.Context, msg amqp.Delivery) {
 
 	if err := c.notifications.SendNotification(ctx, input); err != nil {
 		c.log.Error("send notification for event.created", "error", err, "event_id", payload.EventID)
-		_ = msg.Nack(false, true) 
+		_ = msg.Nack(false, true)
 		return
 	}
 

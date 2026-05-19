@@ -31,10 +31,8 @@ func NewContainer(ctx context.Context, cfg config.Config, log *slog.Logger) (*Co
 
 	cache, err := redisx.Connect(ctx, cfg.Redis)
 	if err != nil {
-		if db != nil {
-			db.Close()
-		}
-		return nil, err
+		log.Warn("redis unavailable, auth profile cache disabled", "error", err)
+		cache = nil
 	}
 
 	users := authpostgres.NewUserRepository(db)
@@ -44,7 +42,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log *slog.Logger) (*Co
 		DB:             db,
 		Redis:          cache,
 		UserRepository: users,
-		AuthUseCase: usecase.NewAuthUseCase(users, usecase.Config{
+		AuthUseCase: usecase.NewAuthUseCase(users, cache, usecase.Config{
 			JWTSecret:       cfg.Auth.JWTSecret,
 			AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
 			RefreshTokenTTL: cfg.Auth.RefreshTokenTTL,

@@ -11,6 +11,10 @@ type LoginRequest struct {
 	Password string `json:"password,omitempty"`
 }
 
+type RefreshTokenRequest struct {
+	RefreshToken string `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+}
+
 type AuthResponse struct {
 	UserId       string `json:"user_id,omitempty"`
 	AccessToken  string `json:"access_token,omitempty"`

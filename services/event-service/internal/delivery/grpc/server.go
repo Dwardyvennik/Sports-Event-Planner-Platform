@@ -100,6 +100,34 @@ func (s *Server) ListEvents(ctx context.Context, req *eventv1.ListEventsRequest)
 	return response, nil
 }
 
+func (s *Server) UpdateEvent(ctx context.Context, req *eventv1.UpdateEventRequest) (*eventv1.EventResponse, error) {
+	if strings.TrimSpace(req.Id) == "" || strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.Sport) == "" || strings.TrimSpace(req.StartTime) == "" {
+		return nil, status.Error(codes.InvalidArgument, "id, title, sport, and start_time are required")
+	}
+
+	startTime, err := parseTime(req.StartTime)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "start_time must be RFC3339")
+	}
+	endTime, err := parseOptionalTime(req.EndTime)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "end_time must be RFC3339")
+	}
+
+	event, err := s.events.UpdateEvent(ctx, req.Id, usecase.CreateEventInput{
+		Sport:           req.Sport,
+		Title:           req.Title,
+		Location:        req.Location,
+		StartTime:       startTime,
+		EndTime:         endTime,
+		MaxParticipants: req.MaxParticipants,
+	})
+	if err != nil {
+		return nil, grpcError(err)
+	}
+	return &eventv1.EventResponse{Event: eventToProto(event)}, nil
+}
+
 func (s *Server) DeleteEvent(ctx context.Context, req *eventv1.DeleteEventRequest) (*eventv1.DeleteEventResponse, error) {
 	if err := s.events.DeleteEvent(ctx, req.EventId); err != nil {
 		return nil, grpcError(err)

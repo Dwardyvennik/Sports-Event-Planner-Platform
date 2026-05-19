@@ -8,6 +8,7 @@ service EventService {
   rpc CreateEvent(CreateEventRequest) returns (EventResponse);
   rpc GetEvent(GetEventRequest) returns (EventResponse);
   rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+  rpc UpdateEvent(UpdateEventRequest) returns (EventResponse);
   rpc DeleteEvent(DeleteEventRequest) returns (DeleteEventResponse);
 }
 
@@ -42,6 +43,16 @@ message CreateEventRequest {
 
 message GetEventRequest {
   string event_id = 1;
+}
+
+message UpdateEventRequest {
+  string id = 1;
+  string title = 2;
+  string sport = 3;
+  string location = 4;
+  string start_time = 5;
+  string end_time = 6;
+  int32 max_participants = 7;
 }
 
 message ListEventsRequest {

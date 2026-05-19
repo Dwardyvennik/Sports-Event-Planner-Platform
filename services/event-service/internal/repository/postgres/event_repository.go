@@ -110,6 +110,61 @@ func (r *EventRepository) Get(ctx context.Context, id string) (*domain.Event, er
 	return event, nil
 }
 
+func (r *EventRepository) UpdateEvent(ctx context.Context, id string, title string, sport string, location string, startTime time.Time, endTime time.Time, maxParticipants int32) (*domain.Event, error) {
+	const query = `
+		UPDATE events
+		SET title = $2,
+			sport = $3,
+			location = $4,
+			start_time = $5,
+			end_time = $6,
+			max_participants = $7,
+			updated_at = now()
+		WHERE id = $1::uuid
+		RETURNING
+			id::text,
+			sport,
+			COALESCE(competition, ''),
+			COALESCE(category, ''),
+			title,
+			COALESCE(description, ''),
+			start_time,
+			end_time,
+			status,
+			COALESCE(country, ''),
+			COALESCE(city, ''),
+			created_at,
+			updated_at`
+
+	event := new(domain.Event)
+	var returnedEndTime *time.Time
+	err := r.pool.QueryRow(ctx, query, id, title, sport, location, startTime, nullableTime(endTime), maxParticipants).Scan(
+		&event.ID,
+		&event.Sport,
+		&event.Competition,
+		&event.Category,
+		&event.Title,
+		&event.Description,
+		&event.StartTime,
+		&returnedEndTime,
+		&event.Status,
+		&event.Country,
+		&event.City,
+		&event.CreatedAt,
+		&event.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) || isInvalidUUID(err) {
+		return nil, domain.ErrEventNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if returnedEndTime != nil {
+		event.EndTime = *returnedEndTime
+	}
+	return event, nil
+}
+
 func (r *EventRepository) List(ctx context.Context, filter domain.EventFilter) ([]*domain.Event, error) {
 	query, args := listQuery(filter)
 

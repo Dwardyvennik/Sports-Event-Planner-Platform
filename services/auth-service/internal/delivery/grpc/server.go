@@ -59,6 +59,21 @@ func (s *Server) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.A
 	}, nil
 }
 
+func (s *Server) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthResponse, error) {
+	if strings.TrimSpace(req.RefreshToken) == "" {
+		return nil, status.Error(codes.InvalidArgument, "refresh_token is required")
+	}
+	tokens, err := s.auth.RefreshToken(ctx, req.RefreshToken)
+	if err != nil {
+		return nil, grpcError(err)
+	}
+	return &authv1.AuthResponse{
+		UserId:       tokens.UserID,
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+	}, nil
+}
+
 func (s *Server) ValidateToken(ctx context.Context, req *authv1.ValidateTokenRequest) (*authv1.ValidateTokenResponse, error) {
 	user, err := s.auth.ValidateToken(ctx, req.Token)
 	if errors.Is(err, domain.ErrInvalidToken) {

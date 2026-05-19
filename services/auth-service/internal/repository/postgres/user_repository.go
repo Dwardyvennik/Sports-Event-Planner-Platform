@@ -102,7 +102,8 @@ func (r *UserRepository) FindSession(ctx context.Context, refreshTokenHash strin
 	const query = `
 		SELECT id::text, user_id::text, refresh_token_hash, expires_at, created_at
 		FROM sessions
-		WHERE refresh_token_hash = $1`
+		WHERE refresh_token_hash = $1
+			AND expires_at > now()`
 
 	session := new(domain.Session)
 	err := r.pool.QueryRow(ctx, query, refreshTokenHash).Scan(

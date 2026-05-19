@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/university/sports-event-planner-platform/services/auth-service/internal/domain"
@@ -39,12 +41,31 @@ type AuthTokens struct {
 
 type AuthUseCase struct {
 	users           UserRepository
+	cache           *redis.Client
 	jwtSecret       []byte
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
 }
 
-func NewAuthUseCase(users UserRepository, cfg Config) *AuthUseCase {
+func NewAuthUseCase(users UserRepository, args ...any) *AuthUseCase {
+	var cache *redis.Client
+	var cfg Config
+	switch len(args) {
+	case 0:
+	case 1:
+		if value, ok := args[0].(Config); ok {
+			cfg = value
+		}
+	default:
+		if value, ok := args[0].(*redis.Client); ok {
+			cache = value
+		}
+		if len(args) > 1 {
+			if value, ok := args[1].(Config); ok {
+				cfg = value
+			}
+		}
+	}
 	if cfg.AccessTokenTTL <= 0 {
 		cfg.AccessTokenTTL = time.Hour
 	}
@@ -53,6 +74,7 @@ func NewAuthUseCase(users UserRepository, cfg Config) *AuthUseCase {
 	}
 	return &AuthUseCase{
 		users:           users,
+		cache:           cache,
 		jwtSecret:       []byte(cfg.JWTSecret),
 		accessTokenTTL:  cfg.AccessTokenTTL,
 		refreshTokenTTL: cfg.RefreshTokenTTL,
@@ -134,7 +156,69 @@ func (u *AuthUseCase) GetProfile(ctx context.Context, userID string) (*domain.Us
 	if userID == "" {
 		return nil, domain.ErrUserNotFound
 	}
-	return u.users.FindByID(ctx, userID)
+	if user, ok := u.profileFromCache(ctx, userID); ok {
+		return user, nil
+	}
+	user, err := u.users.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	u.cacheProfile(ctx, user)
+	return user, nil
+}
+
+func (u *AuthUseCase) RefreshToken(ctx context.Context, rawRefreshToken string) (*AuthTokens, error) {
+	rawRefreshToken = strings.TrimSpace(rawRefreshToken)
+	if rawRefreshToken == "" {
+		return nil, domain.ErrInvalidToken
+	}
+
+	session, err := u.users.FindSession(ctx, hashToken(rawRefreshToken))
+	if errors.Is(err, domain.ErrInvalidToken) {
+		return nil, domain.ErrInvalidToken
+	}
+	if err != nil {
+		return nil, err
+	}
+	if session == nil || time.Now().UTC().After(session.ExpiresAt) {
+		return nil, domain.ErrInvalidToken
+	}
+
+	user, err := u.users.FindByID(ctx, session.UserID)
+	if errors.Is(err, domain.ErrUserNotFound) {
+		return nil, domain.ErrInvalidToken
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return u.issueTokens(ctx, user)
+}
+
+func (u *AuthUseCase) profileFromCache(ctx context.Context, id string) (*domain.User, bool) {
+	if u.cache == nil {
+		return nil, false
+	}
+	data, err := u.cache.Get(ctx, "user:"+id).Bytes()
+	if err != nil {
+		return nil, false
+	}
+	user := new(domain.User)
+	if err := json.Unmarshal(data, user); err != nil {
+		return nil, false
+	}
+	return user, true
+}
+
+func (u *AuthUseCase) cacheProfile(ctx context.Context, user *domain.User) {
+	if u.cache == nil || user == nil || user.ID == "" {
+		return
+	}
+	data, err := json.Marshal(user)
+	if err != nil {
+		return
+	}
+	_ = u.cache.Set(ctx, "user:"+user.ID, data, 5*time.Minute).Err()
 }
 
 func (u *AuthUseCase) issueTokens(ctx context.Context, user *domain.User) (*AuthTokens, error) {

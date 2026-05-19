@@ -7,6 +7,7 @@ option go_package = "github.com/university/sports-event-planner-platform/service
 service AuthService {
   rpc Register(RegisterRequest) returns (AuthResponse);
   rpc Login(LoginRequest) returns (AuthResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
   rpc GetProfile(GetProfileRequest) returns (UserProfileResponse);
 }
@@ -20,6 +21,10 @@ message RegisterRequest {
 message LoginRequest {
   string email = 1;
   string password = 2;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
 }
 
 message AuthResponse {
