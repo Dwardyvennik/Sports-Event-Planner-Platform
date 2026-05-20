@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/config"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/config"
 )
 
 func TestConfigLoads(t *testing.T) {

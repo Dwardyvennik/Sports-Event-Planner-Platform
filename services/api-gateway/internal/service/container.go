@@ -4,11 +4,11 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/university/sports-event-planner-platform/pkg/health"
-	"github.com/university/sports-event-planner-platform/services/api-gateway/internal/config"
-	deliverygrpc "github.com/university/sports-event-planner-platform/services/api-gateway/internal/delivery/grpc"
-	"github.com/university/sports-event-planner-platform/services/api-gateway/internal/domain"
-	"github.com/university/sports-event-planner-platform/services/api-gateway/internal/usecase"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/health"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/api-gateway/internal/config"
+	deliverygrpc "github.com/dwardyvennik/sports-event-planner-platform/services/api-gateway/internal/delivery/grpc"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/api-gateway/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/api-gateway/internal/usecase"
 )
 
 type Container struct {

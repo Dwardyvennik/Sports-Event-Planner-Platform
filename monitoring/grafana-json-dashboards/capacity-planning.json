@@ -1,0 +1,81 @@
+{
+  "uid": "sports-capacity-planning",
+  "title": "Sports Capacity Planning",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["sports-event-planner", "capacity"],
+  "time": { "from": "now-3h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "CPU Usage",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        { "expr": "sum by (job) (rate(process_cpu_seconds_total{job=~\"api-gateway|auth-service|event-service|notification-service\"}[2m])) * 100", "legendFormat": "{{job}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Resident Memory",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        { "expr": "process_resident_memory_bytes{job=~\"api-gateway|auth-service|event-service|notification-service\"}", "legendFormat": "{{job}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Goroutines",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        { "expr": "go_goroutines{job=~\"api-gateway|auth-service|event-service|notification-service\"}", "legendFormat": "{{job}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Go Heap Allocation",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "go_memstats_heap_alloc_bytes{job=~\"api-gateway|auth-service|event-service|notification-service\"}", "legendFormat": "{{job}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "gRPC Requests By Method",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (service, method) (rate(sports_planner_grpc_server_requests_total[5m]))", "legendFormat": "{{service}} {{method}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "NATS Flow",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "sum by (subject) (rate(sports_planner_nats_published_total[5m]))", "legendFormat": "{{subject}} published", "refId": "A" },
+        { "expr": "sum by (subject) (rate(sports_planner_nats_consumed_total[5m]))", "legendFormat": "{{subject}} consumed", "refId": "B" },
+        { "expr": "sum by (subject) (rate(sports_planner_nats_consumer_retry_total[5m]))", "legendFormat": "{{subject}} retries", "refId": "C" },
+        { "expr": "sum by (subject) (rate(sports_planner_nats_consumer_failed_total[5m]))", "legendFormat": "{{subject}} failed", "refId": "D" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    }
+  ]
+}

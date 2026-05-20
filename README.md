@@ -1,6 +1,6 @@
 # Sports Event Planner Platform
 
-Clean Architecture microservices starter for a university sports event planner platform.
+Clean Architecture microservices starter for a sports event planner platform.
 
 ## Services
 
@@ -19,7 +19,7 @@ make docker-up
 make migrate-up
 ```
 
-Prometheus runs on `localhost:9090`, Grafana on `localhost:3000`, NATS monitoring on `localhost:8222`, and the API gateway on `localhost:8080`.
+Prometheus runs on `localhost:9090`, Alertmanager on `localhost:9093`, Grafana on `localhost:3000`, NATS monitoring on `localhost:8222`, and the API gateway on `localhost:8080`.
 
 `make test-integration` runs the Docker Compose-backed end-to-end suite with isolated Postgres, Redis, and NATS services, then tears the stack down.
 

@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/university/sports-event-planner-platform/pkg/config"
-	"github.com/university/sports-event-planner-platform/pkg/health"
-	"github.com/university/sports-event-planner-platform/pkg/metrics"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/config"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/health"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/metrics"
 )
 
 func NewServer(cfg config.HTTPConfig, service string, checks map[string]health.Checker, log *slog.Logger, routes func(*http.ServeMux)) *http.Server {
@@ -24,7 +24,7 @@ func NewServer(cfg config.HTTPConfig, service string, checks map[string]health.C
 
 	return &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           requestLogger(log, mux),
+		Handler:           metrics.InstrumentHTTP(service, requestLogger(log, mux)),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,

@@ -1,0 +1,67 @@
+{
+  "uid": "sports-alerts",
+  "title": "Sports Alerts",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "tags": ["sports-event-planner", "alerts"],
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Firing Alerts",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "sum(ALERTS{alertstate=\"firing\"})", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Target Health",
+      "gridPos": { "x": 6, "y": 0, "w": 18, "h": 8 },
+      "targets": [
+        { "expr": "up", "legendFormat": "{{job}} {{instance}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "max": 1 }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "HTTP 5xx Rate",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (job) (rate(sports_planner_http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum by (job) (rate(sports_planner_http_requests_total[5m])), 0.001)", "legendFormat": "{{job}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "gRPC Error Rate",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (service) (rate(sports_planner_grpc_server_errors_total[5m])) / clamp_min(sum by (service) (rate(sports_planner_grpc_server_requests_total[5m])), 0.001)", "legendFormat": "{{service}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Alert States",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "sum by (alertname, severity, alertstate) (ALERTS)", "legendFormat": "{{alertname}} {{severity}} {{alertstate}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    }
+  ]
+}

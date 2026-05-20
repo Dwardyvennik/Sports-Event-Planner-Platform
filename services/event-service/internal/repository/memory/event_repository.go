@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/university/sports-event-planner-platform/services/event-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/event-service/internal/domain"
 )
 
 type EventRepository struct {

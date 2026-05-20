@@ -7,32 +7,15 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	authv1 "github.com/university/sports-event-planner-platform/services/auth-service/proto/auth/v1"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/metrics"
+	authv1 "github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/proto/auth/v1"
 )
 
-var (
-	httpRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "sports_planner",
-		Subsystem: "api_gateway",
-		Name:      "http_requests_total",
-		Help:      "Total number of API gateway HTTP requests.",
-	}, []string{"method", "path", "status"})
-
-	httpRequestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: "sports_planner",
-		Subsystem: "api_gateway",
-		Name:      "http_request_duration_seconds",
-		Help:      "API gateway HTTP request duration.",
-		Buckets:   prometheus.DefBuckets,
-	}, []string{"method", "path"})
-)
+const serviceName = "api-gateway"
 
 func MetricsHandler() gin.HandlerFunc {
-	handler := promhttp.Handler()
+	handler := metrics.Handler(serviceName)
 	return func(c *gin.Context) {
 		handler.ServeHTTP(c.Writer, c.Request)
 	}
@@ -61,8 +44,7 @@ func PrometheusMiddleware() gin.HandlerFunc {
 			path = c.Request.URL.Path
 		}
 
-		httpRequestsTotal.WithLabelValues(c.Request.Method, path, nethttp.StatusText(c.Writer.Status())).Inc()
-		httpRequestDuration.WithLabelValues(c.Request.Method, path).Observe(time.Since(started).Seconds())
+		metrics.ObserveHTTP(serviceName, c.Request.Method, path, c.Writer.Status(), time.Since(started))
 	}
 }
 

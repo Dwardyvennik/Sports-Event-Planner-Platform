@@ -1,6 +1,6 @@
 package config
 
-import sharedconfig "github.com/university/sports-event-planner-platform/pkg/config"
+import sharedconfig "github.com/dwardyvennik/sports-event-planner-platform/pkg/config"
 
 type Config = sharedconfig.Config
 

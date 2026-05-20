@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
  
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/domain"
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/mailgun"
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/usecase"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/mailgun"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/usecase"
 	"log/slog"
 	"os"
 )

@@ -1,0 +1,109 @@
+{
+  "uid": "sports-services-overview",
+  "title": "Sports Services Overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "tags": ["sports-event-planner", "backend"],
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Healthy Backend Targets",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "sum(up{job=~\"api-gateway|auth-service|event-service|notification-service\"})", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "HTTP Traffic",
+      "gridPos": { "x": 6, "y": 0, "w": 9, "h": 8 },
+      "targets": [
+        { "expr": "sum by (job) (rate(sports_planner_http_requests_total[1m]))", "legendFormat": "{{job}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "gRPC Traffic",
+      "gridPos": { "x": 15, "y": 0, "w": 9, "h": 8 },
+      "targets": [
+        { "expr": "sum by (service) (rate(sports_planner_grpc_server_requests_total[1m]))", "legendFormat": "{{service}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "HTTP Latency",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (job, le) (rate(sports_planner_http_request_duration_seconds_bucket[5m])))", "legendFormat": "{{job}} p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (job, le) (rate(sports_planner_http_request_duration_seconds_bucket[5m])))", "legendFormat": "{{job}} p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum by (job, le) (rate(sports_planner_http_request_duration_seconds_bucket[5m])))", "legendFormat": "{{job}} p99", "refId": "C" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "gRPC Latency",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (service, le) (rate(sports_planner_grpc_server_request_duration_seconds_bucket[5m])))", "legendFormat": "{{service}} p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (service, le) (rate(sports_planner_grpc_server_request_duration_seconds_bucket[5m])))", "legendFormat": "{{service}} p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum by (service, le) (rate(sports_planner_grpc_server_request_duration_seconds_bucket[5m])))", "legendFormat": "{{service}} p99", "refId": "C" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "HTTP Errors",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (job) (rate(sports_planner_http_requests_total{status=~\"4..\"}[1m]))", "legendFormat": "{{job}} 4xx", "refId": "A" },
+        { "expr": "sum by (job) (rate(sports_planner_http_requests_total{status=~\"5..\"}[1m]))", "legendFormat": "{{job}} 5xx", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "gRPC Errors",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (service, code) (rate(sports_planner_grpc_server_errors_total[1m]))", "legendFormat": "{{service}} {{code}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Business Metrics",
+      "gridPos": { "x": 0, "y": 24, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "sum(increase(sports_planner_events_created_total[5m]))", "legendFormat": "events created", "refId": "A" },
+        { "expr": "sum(increase(sports_planner_event_join_total[5m]))", "legendFormat": "event joins", "refId": "B" },
+        { "expr": "sum(increase(sports_planner_active_users_total[5m]))", "legendFormat": "auth sessions", "refId": "C" },
+        { "expr": "sum(increase(sports_planner_notifications_sent_total[5m]))", "legendFormat": "notifications sent", "refId": "D" },
+        { "expr": "sum(increase(sports_planner_notifications_failed_total[5m]))", "legendFormat": "notifications failed", "refId": "E" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    }
+  ]
+}

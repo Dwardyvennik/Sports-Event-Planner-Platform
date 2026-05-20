@@ -1,4 +1,4 @@
-module github.com/university/sports-event-planner-platform
+module github.com/dwardyvennik/sports-event-planner-platform
 
 go 1.25
 

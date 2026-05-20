@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package sports.notification.v1;
 
-option go_package = "github.com/university/sports-event-planner-platform/services/notification-service/proto/notification/v1;notificationv1";
+option go_package = "github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/proto/notification/v1;notificationv1";
 
 service NotificationService {
   rpc SendNotification(SendNotificationRequest) returns (NotificationResponse);

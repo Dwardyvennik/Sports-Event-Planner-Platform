@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	sharedconfig "github.com/university/sports-event-planner-platform/pkg/config"
+	sharedconfig "github.com/dwardyvennik/sports-event-planner-platform/pkg/config"
 )
 
 type Config struct {

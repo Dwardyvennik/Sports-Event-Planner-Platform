@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/university/sports-event-planner-platform/pkg/lifecycle"
-	"github.com/university/sports-event-planner-platform/pkg/logger"
-	serviceconfig "github.com/university/sports-event-planner-platform/services/api-gateway/internal/config"
-	deliveryhttp "github.com/university/sports-event-planner-platform/services/api-gateway/internal/delivery/http"
-	"github.com/university/sports-event-planner-platform/services/api-gateway/internal/service"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/lifecycle"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/logger"
+	serviceconfig "github.com/dwardyvennik/sports-event-planner-platform/services/api-gateway/internal/config"
+	deliveryhttp "github.com/dwardyvennik/sports-event-planner-platform/services/api-gateway/internal/delivery/http"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/api-gateway/internal/service"
 )
 
 func main() {

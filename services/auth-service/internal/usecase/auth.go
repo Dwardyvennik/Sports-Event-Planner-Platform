@@ -14,7 +14,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/university/sports-event-planner-platform/services/auth-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/metrics"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/internal/domain"
 )
 
 type UserRepository interface {
@@ -240,6 +241,7 @@ func (u *AuthUseCase) issueTokens(ctx context.Context, user *domain.User) (*Auth
 	if err := u.users.CreateSession(ctx, session); err != nil {
 		return nil, err
 	}
+	metrics.ActiveUsersTotal.Inc()
 
 	return &AuthTokens{
 		UserID:       user.ID,

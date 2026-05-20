@@ -11,9 +11,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/university/sports-event-planner-platform/services/event-service/internal/domain"
-	"github.com/university/sports-event-planner-platform/services/event-service/internal/usecase"
-	eventv1 "github.com/university/sports-event-planner-platform/services/event-service/proto/event/v1"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/event-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/event-service/internal/usecase"
+	eventv1 "github.com/dwardyvennik/sports-event-planner-platform/services/event-service/proto/event/v1"
 )
 
 func Register(server *grpc.Server, events *usecase.EventUseCase, log *slog.Logger) {

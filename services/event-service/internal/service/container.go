@@ -9,13 +9,13 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/university/sports-event-planner-platform/pkg/health"
-	"github.com/university/sports-event-planner-platform/pkg/natsx"
-	sharedpostgres "github.com/university/sports-event-planner-platform/pkg/postgres"
-	"github.com/university/sports-event-planner-platform/pkg/redisx"
-	"github.com/university/sports-event-planner-platform/services/event-service/internal/config"
-	eventpostgres "github.com/university/sports-event-planner-platform/services/event-service/internal/repository/postgres"
-	"github.com/university/sports-event-planner-platform/services/event-service/internal/usecase"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/health"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/natsx"
+	sharedpostgres "github.com/dwardyvennik/sports-event-planner-platform/pkg/postgres"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/redisx"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/event-service/internal/config"
+	eventpostgres "github.com/dwardyvennik/sports-event-planner-platform/services/event-service/internal/repository/postgres"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/event-service/internal/usecase"
 )
 
 type Container struct {

@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/university/sports-event-planner-platform/services/auth-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/internal/domain"
 )
 
 type UserRepository struct {

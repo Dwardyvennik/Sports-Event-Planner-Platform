@@ -10,11 +10,11 @@ import (
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/university/sports-event-planner-platform/pkg/grpcx"
-	"github.com/university/sports-event-planner-platform/pkg/health"
-	authv1 "github.com/university/sports-event-planner-platform/services/auth-service/proto/auth/v1"
-	eventv1 "github.com/university/sports-event-planner-platform/services/event-service/proto/event/v1"
-	notificationv1 "github.com/university/sports-event-planner-platform/services/notification-service/proto/notification/v1"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/grpcx"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/health"
+	authv1 "github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/proto/auth/v1"
+	eventv1 "github.com/dwardyvennik/sports-event-planner-platform/services/event-service/proto/event/v1"
+	notificationv1 "github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/proto/notification/v1"
 )
 
 type Clients struct {

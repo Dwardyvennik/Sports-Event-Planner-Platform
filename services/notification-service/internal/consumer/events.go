@@ -9,8 +9,9 @@ import (
 
 	"github.com/nats-io/nats.go"
 
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/domain"
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/usecase"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/metrics"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/usecase"
 )
 
 const eventCreatedSubject = "events.created"
@@ -64,6 +65,7 @@ func (c *EventConsumer) Start(ctx context.Context) {
 func (c *EventConsumer) handle(ctx context.Context, msg *nats.Msg) {
 	var payload eventCreatedMessage
 	if err := json.Unmarshal(msg.Data, &payload); err != nil {
+		metrics.NATSConsumerFailedTotal.WithLabelValues(eventCreatedSubject).Inc()
 		c.log.Error("unmarshal events.created message", "error", err, "body", string(msg.Data))
 		return
 	}
@@ -77,12 +79,15 @@ func (c *EventConsumer) handle(ctx context.Context, msg *nats.Msg) {
 
 	for attempt := 1; attempt <= 3; attempt++ {
 		if err := c.notifications.SendNotification(ctx, input); err != nil {
+			metrics.NATSConsumerRetryTotal.WithLabelValues(eventCreatedSubject).Inc()
 			c.log.Warn("send notification for events.created failed", "error", err, "event_id", payload.EventID, "attempt", attempt)
 			time.Sleep(time.Duration(attempt) * 200 * time.Millisecond)
 			continue
 		}
+		metrics.NATSConsumedTotal.WithLabelValues(eventCreatedSubject).Inc()
 		return
 	}
 
+	metrics.NATSConsumerFailedTotal.WithLabelValues(eventCreatedSubject).Inc()
 	c.log.Error("send notification for events.created exhausted retries", "event_id", payload.EventID, "user_id", payload.UserID)
 }

@@ -20,8 +20,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/university/sports-event-planner-platform/pkg/grpcx"
-	authv1 "github.com/university/sports-event-planner-platform/services/auth-service/proto/auth/v1"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/grpcx"
+	authv1 "github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/proto/auth/v1"
 )
 
 const (

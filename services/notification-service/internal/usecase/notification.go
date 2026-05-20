@@ -6,8 +6,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/domain"
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/mailgun"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/metrics"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/mailgun"
 )
 
 type NotificationRepository interface {
@@ -89,13 +90,16 @@ func (u *NotificationUseCase) SendNotification(ctx context.Context, input SendNo
 	now := time.Now()
 	if sendErr != nil {
 		n.Status = domain.StatusFailed
+		metrics.NotificationsFailedTotal.Inc()
 		u.log.Error("notification send failed", "error", sendErr, "user_id", input.UserID, "channel", input.Channel)
 	} else {
 		n.Status = domain.StatusSent
 		n.SentAt = &now
+		metrics.NotificationsSentTotal.Inc()
 	}
 
 	if err := u.notifications.SaveNotification(ctx, n); err != nil {
+		metrics.NotificationsFailedTotal.Inc()
 		return fmt.Errorf("save notification: %w", err)
 	}
 	return sendErr

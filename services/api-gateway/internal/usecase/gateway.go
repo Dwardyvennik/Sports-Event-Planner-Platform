@@ -1,6 +1,6 @@
 package usecase
 
-import "github.com/university/sports-event-planner-platform/services/api-gateway/internal/domain"
+import "github.com/dwardyvennik/sports-event-planner-platform/services/api-gateway/internal/domain"
 
 type GatewayUseCase struct {
 	upstreams []domain.Upstream

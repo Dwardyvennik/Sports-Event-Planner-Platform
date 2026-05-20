@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package sports.gateway.v1;
 
-option go_package = "github.com/university/sports-event-planner-platform/services/api-gateway/proto/gateway/v1;gatewayv1";
+option go_package = "github.com/dwardyvennik/sports-event-planner-platform/services/api-gateway/proto/gateway/v1;gatewayv1";
 
 service GatewayService {
   rpc Health(HealthRequest) returns (HealthResponse);

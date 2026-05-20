@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/university/sports-event-planner-platform/services/auth-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/internal/domain"
 )
 
 func TestRegisterHashesPasswordAndIssuesValidToken(t *testing.T) {

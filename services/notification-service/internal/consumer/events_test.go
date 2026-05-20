@@ -11,8 +11,8 @@ import (
 
 	"github.com/nats-io/nats.go"
 
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/domain"
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/usecase"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/usecase"
 )
 
 func TestEventConsumerHandleRetriesAndUsesPayloadUserID(t *testing.T) {

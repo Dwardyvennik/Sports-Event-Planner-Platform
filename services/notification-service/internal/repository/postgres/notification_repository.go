@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/domain"
 )
 
 type NotificationRepository struct {

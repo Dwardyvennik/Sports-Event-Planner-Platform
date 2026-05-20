@@ -7,8 +7,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/university/sports-event-planner-platform/pkg/config"
-	"github.com/university/sports-event-planner-platform/pkg/health"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/config"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/health"
 )
 
 func Connect(ctx context.Context, cfg config.RedisConfig) (*redis.Client, error) {

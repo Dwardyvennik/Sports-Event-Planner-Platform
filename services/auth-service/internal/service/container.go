@@ -8,12 +8,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/university/sports-event-planner-platform/pkg/health"
-	sharedpostgres "github.com/university/sports-event-planner-platform/pkg/postgres"
-	"github.com/university/sports-event-planner-platform/pkg/redisx"
-	"github.com/university/sports-event-planner-platform/services/auth-service/internal/config"
-	authpostgres "github.com/university/sports-event-planner-platform/services/auth-service/internal/repository/postgres"
-	"github.com/university/sports-event-planner-platform/services/auth-service/internal/usecase"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/health"
+	sharedpostgres "github.com/dwardyvennik/sports-event-planner-platform/pkg/postgres"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/redisx"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/internal/config"
+	authpostgres "github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/internal/repository/postgres"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/internal/usecase"
 )
 
 type Container struct {

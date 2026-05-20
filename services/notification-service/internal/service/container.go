@@ -8,14 +8,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
 
-	"github.com/university/sports-event-planner-platform/pkg/health"
-	"github.com/university/sports-event-planner-platform/pkg/natsx"
-	sharedpostgres "github.com/university/sports-event-planner-platform/pkg/postgres"
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/config"
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/consumer"
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/mailgun"
-	notificationpostgres "github.com/university/sports-event-planner-platform/services/notification-service/internal/repository/postgres"
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/usecase"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/health"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/natsx"
+	sharedpostgres "github.com/dwardyvennik/sports-event-planner-platform/pkg/postgres"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/config"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/consumer"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/mailgun"
+	notificationpostgres "github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/repository/postgres"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/usecase"
 )
 
 type Container struct {

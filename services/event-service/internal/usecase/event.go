@@ -10,7 +10,8 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/university/sports-event-planner-platform/services/event-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/metrics"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/event-service/internal/domain"
 )
 
 const (
@@ -104,6 +105,7 @@ func (u *EventUseCase) CreateEvent(ctx context.Context, input CreateEventInput) 
 	if err := u.events.Create(ctx, event); err != nil {
 		return nil, err
 	}
+	metrics.EventsCreatedTotal.Inc()
 	u.publish(ctx, subjectEventCreated, eventPayload(event))
 	return event, nil
 }
@@ -202,6 +204,7 @@ func (u *EventUseCase) JoinEvent(ctx context.Context, id string, userID string) 
 	if err != nil {
 		return nil, err
 	}
+	metrics.EventJoinTotal.Inc()
 	u.deleteEventCache(ctx, id)
 	u.publish(ctx, subjectEventJoined, map[string]string{
 		"event_id": id,
@@ -310,20 +313,24 @@ func (u *EventUseCase) publish(ctx context.Context, subject string, payload any)
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
+		metrics.NATSPublishFailedTotal.WithLabelValues(subject).Inc()
 		u.log.WarnContext(ctx, "marshal event payload", "subject", subject, "error", err)
 		return
 	}
 	for attempt := 1; attempt <= 3; attempt++ {
 		if err := u.broker.Publish(subject, body); err != nil {
+			metrics.NATSPublishFailedTotal.WithLabelValues(subject).Inc()
 			u.log.WarnContext(ctx, "publish nats event failed", "subject", subject, "attempt", attempt, "error", err)
 			time.Sleep(time.Duration(attempt) * 100 * time.Millisecond)
 			continue
 		}
 		if err := u.broker.FlushWithContext(ctx); err != nil {
+			metrics.NATSPublishFailedTotal.WithLabelValues(subject).Inc()
 			u.log.WarnContext(ctx, "flush nats event failed", "subject", subject, "attempt", attempt, "error", err)
 			time.Sleep(time.Duration(attempt) * 100 * time.Millisecond)
 			continue
 		}
+		metrics.NATSPublishedTotal.WithLabelValues(subject).Inc()
 		return
 	}
 }

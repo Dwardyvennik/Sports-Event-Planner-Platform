@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/university/sports-event-planner-platform/pkg/config"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/config"
 )
 
 func New(cfg config.AppConfig) *slog.Logger {

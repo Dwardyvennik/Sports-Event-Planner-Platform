@@ -32,6 +32,13 @@ var (
 		Buckets:   prometheus.DefBuckets,
 	}, []string{"service", "method"})
 
+	grpcServerErrors = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "sports_planner",
+		Subsystem: "grpc_server",
+		Name:      "errors_total",
+		Help:      "Total number of failed gRPC server requests.",
+	}, []string{"service", "method", "code"})
+
 	grpcClientRequests = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "sports_planner",
 		Subsystem: "grpc_client",
@@ -46,6 +53,13 @@ var (
 		Help:      "gRPC client request duration.",
 		Buckets:   prometheus.DefBuckets,
 	}, []string{"method"})
+
+	grpcClientErrors = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "sports_planner",
+		Subsystem: "grpc_client",
+		Name:      "errors_total",
+		Help:      "Total number of failed gRPC client requests.",
+	}, []string{"method", "code"})
 )
 
 func NewServer(service string, log *slog.Logger) *grpc.Server {
@@ -85,6 +99,7 @@ func UnaryClientLoggingInterceptor(log *slog.Logger) grpc.UnaryClientInterceptor
 		grpcClientRequests.WithLabelValues(method, code).Inc()
 		grpcClientDuration.WithLabelValues(method).Observe(time.Since(started).Seconds())
 		if err != nil {
+			grpcClientErrors.WithLabelValues(method, code).Inc()
 			log.WarnContext(ctx, "grpc client request failed",
 				"method", method,
 				"duration_ms", time.Since(started).Milliseconds(),
@@ -107,6 +122,9 @@ func unaryMetricsInterceptor(service string) grpc.UnaryServerInterceptor {
 		code := status.Code(err).String()
 		grpcServerRequests.WithLabelValues(service, info.FullMethod, code).Inc()
 		grpcServerDuration.WithLabelValues(service, info.FullMethod).Observe(time.Since(started).Seconds())
+		if err != nil {
+			grpcServerErrors.WithLabelValues(service, info.FullMethod, code).Inc()
+		}
 		return response, err
 	}
 }

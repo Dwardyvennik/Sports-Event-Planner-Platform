@@ -8,8 +8,8 @@ import (
 
 	"github.com/nats-io/nats.go"
 
-	"github.com/university/sports-event-planner-platform/pkg/config"
-	"github.com/university/sports-event-planner-platform/pkg/health"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/config"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/health"
 )
 
 func Connect(ctx context.Context, cfg config.NATSConfig) (*nats.Conn, error) {

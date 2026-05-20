@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/university/sports-event-planner-platform/services/event-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/event-service/internal/domain"
 )
 
 type EventRepository struct {

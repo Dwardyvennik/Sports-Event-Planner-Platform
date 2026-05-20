@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package sports.auth.v1;
 
-option go_package = "github.com/university/sports-event-planner-platform/services/auth-service/proto/auth/v1;authv1";
+option go_package = "github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/proto/auth/v1;authv1";
 
 service AuthService {
   rpc Register(RegisterRequest) returns (AuthResponse);

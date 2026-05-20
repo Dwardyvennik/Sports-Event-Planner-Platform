@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/university/sports-event-planner-platform/services/auth-service/internal/domain"
-	"github.com/university/sports-event-planner-platform/services/auth-service/internal/usecase"
-	authv1 "github.com/university/sports-event-planner-platform/services/auth-service/proto/auth/v1"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/internal/usecase"
+	authv1 "github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/proto/auth/v1"
 )
 
 func Register(server *grpc.Server, auth *usecase.AuthUseCase, log *slog.Logger) {

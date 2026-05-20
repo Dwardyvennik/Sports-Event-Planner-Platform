@@ -11,9 +11,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/domain"
-	"github.com/university/sports-event-planner-platform/services/notification-service/internal/usecase"
-	notificationv1 "github.com/university/sports-event-planner-platform/services/notification-service/proto/notification/v1"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/domain"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/usecase"
+	notificationv1 "github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/proto/notification/v1"
 )
 
 func Register(server *grpc.Server, notifications *usecase.NotificationUseCase, log *slog.Logger) {

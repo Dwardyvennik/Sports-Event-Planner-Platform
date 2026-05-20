@@ -225,15 +225,43 @@ services:
     image: prom/prometheus:v2.55.1
     command:
       - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
     volumes:
-      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus-data:/prometheus
     ports:
       - "9090:9090"
     depends_on:
+      - alertmanager
       - auth-service
       - event-service
       - notification-service
       - api-gateway
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - sports-platform
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    ports:
+      - "9093:9093"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:9093/-/healthy"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
     networks:
       - sports-platform
 
@@ -244,8 +272,9 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./configs/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - ./monitoring/grafana-dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./monitoring/grafana-json-dashboards:/var/lib/grafana/dashboards:ro
     ports:
       - "3000:3000"
     depends_on:
@@ -261,4 +290,6 @@ volumes:
   auth-postgres-data:
   event-postgres-data:
   notification-postgres-data:
+  prometheus-data:
+  alertmanager-data:
   grafana-data:

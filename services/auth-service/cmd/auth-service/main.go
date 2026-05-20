@@ -4,13 +4,13 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/university/sports-event-planner-platform/pkg/grpcx"
-	"github.com/university/sports-event-planner-platform/pkg/httpx"
-	"github.com/university/sports-event-planner-platform/pkg/lifecycle"
-	"github.com/university/sports-event-planner-platform/pkg/logger"
-	serviceconfig "github.com/university/sports-event-planner-platform/services/auth-service/internal/config"
-	deliverygrpc "github.com/university/sports-event-planner-platform/services/auth-service/internal/delivery/grpc"
-	"github.com/university/sports-event-planner-platform/services/auth-service/internal/service"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/grpcx"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/httpx"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/lifecycle"
+	"github.com/dwardyvennik/sports-event-planner-platform/pkg/logger"
+	serviceconfig "github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/internal/config"
+	deliverygrpc "github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/internal/delivery/grpc"
+	"github.com/dwardyvennik/sports-event-planner-platform/services/auth-service/internal/service"
 )
 
 func main() {
