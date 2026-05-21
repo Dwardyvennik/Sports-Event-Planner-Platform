@@ -1,18 +1,16 @@
 package tests
- 
+
 import (
 	"context"
 	"errors"
+	"io"
+	"log/slog"
 	"testing"
 	"time"
- 
+
 	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/domain"
-	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/mailgun"
 	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/usecase"
-	"log/slog"
-	"os"
 )
- 
 
 type mockRepo struct {
 	notifications []*domain.Notification
@@ -20,9 +18,9 @@ type mockRepo struct {
 	pingErr       error
 	saveErr       error
 }
- 
+
 func (m *mockRepo) Ping(_ context.Context) error { return m.pingErr }
- 
+
 func (m *mockRepo) SaveNotification(_ context.Context, n *domain.Notification) error {
 	if m.saveErr != nil {
 		return m.saveErr
@@ -32,7 +30,7 @@ func (m *mockRepo) SaveNotification(_ context.Context, n *domain.Notification) e
 	m.notifications = append(m.notifications, n)
 	return nil
 }
- 
+
 func (m *mockRepo) GetUserNotifications(_ context.Context, userID string) ([]*domain.Notification, error) {
 	var result []*domain.Notification
 	for _, n := range m.notifications {
@@ -42,7 +40,7 @@ func (m *mockRepo) GetUserNotifications(_ context.Context, userID string) ([]*do
 	}
 	return result, nil
 }
- 
+
 func (m *mockRepo) SaveReminder(_ context.Context, rem *domain.Reminder) error {
 	if m.saveErr != nil {
 		return m.saveErr
@@ -52,7 +50,7 @@ func (m *mockRepo) SaveReminder(_ context.Context, rem *domain.Reminder) error {
 	m.reminders = append(m.reminders, rem)
 	return nil
 }
- 
+
 func (m *mockRepo) GetPendingReminders(_ context.Context, before time.Time) ([]*domain.Reminder, error) {
 	var result []*domain.Reminder
 	for _, r := range m.reminders {
@@ -62,7 +60,7 @@ func (m *mockRepo) GetPendingReminders(_ context.Context, before time.Time) ([]*
 	}
 	return result, nil
 }
- 
+
 func (m *mockRepo) UpdateReminderStatus(_ context.Context, id, status string) error {
 	for _, r := range m.reminders {
 		if r.ID == id {
@@ -71,15 +69,38 @@ func (m *mockRepo) UpdateReminderStatus(_ context.Context, id, status string) er
 	}
 	return nil
 }
- 
+
 func newTestUseCase(repo *mockRepo) *usecase.NotificationUseCase {
-	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	mg := mailgun.NewClient("", "", "") // empty = mock mode
-	return usecase.NewNotificationUseCase(repo, mg, log)
+	return usecase.NewNotificationUseCase(repo, nil, nil, discardLogger())
 }
- 
+
+type stubEmailSender struct {
+	configured bool
+	sends      int
+	to         string
+	subject    string
+	body       string
+	err        error
+}
+
+func (s *stubEmailSender) Send(to, subject, body string) error {
+	s.sends++
+	s.to = to
+	s.subject = subject
+	s.body = body
+	return s.err
+}
+
+func (s *stubEmailSender) IsConfigured() bool {
+	return s.configured
+}
+
+func discardLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
 // --- Tests ---
- 
+
 func TestHealth_OK(t *testing.T) {
 	repo := &mockRepo{}
 	uc := newTestUseCase(repo)
@@ -87,7 +108,7 @@ func TestHealth_OK(t *testing.T) {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 }
- 
+
 func TestHealth_Error(t *testing.T) {
 	repo := &mockRepo{pingErr: errors.New("db down")}
 	uc := newTestUseCase(repo)
@@ -95,12 +116,12 @@ func TestHealth_Error(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 }
- 
+
 func TestSendNotification_MockChannel(t *testing.T) {
 	repo := &mockRepo{}
 	uc := newTestUseCase(repo)
- 
-	err := uc.SendNotification(context.Background(), usecase.SendNotificationInput{
+
+	_, err := uc.SendNotification(context.Background(), usecase.SendNotificationInput{
 		UserID:  "user-1",
 		Channel: domain.ChannelMock,
 		Subject: "Test Subject",
@@ -116,12 +137,70 @@ func TestSendNotification_MockChannel(t *testing.T) {
 		t.Fatalf("expected status 'sent', got '%s'", repo.notifications[0].Status)
 	}
 }
- 
+
+func TestSendNotification_FallsBackToSMTP(t *testing.T) {
+	repo := &mockRepo{}
+	mg := &stubEmailSender{configured: false}
+	smtp := &stubEmailSender{configured: true}
+	uc := usecase.NewNotificationUseCase(repo, mg, smtp, discardLogger())
+
+	n, err := uc.SendNotification(context.Background(), usecase.SendNotificationInput{
+		UserID:  "user-1",
+		Channel: domain.ChannelEmail,
+		Subject: "Test Subject",
+		Body:    "<p>Test Body</p>",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if n.Status != domain.StatusSent {
+		t.Fatalf("expected status 'sent', got '%s'", n.Status)
+	}
+	if n.Channel != domain.ChannelEmail {
+		t.Fatalf("expected channel 'email', got '%s'", n.Channel)
+	}
+	if mg.sends != 0 {
+		t.Fatalf("expected mailgun not to send, got %d sends", mg.sends)
+	}
+	if smtp.sends != 1 {
+		t.Fatalf("expected smtp to send once, got %d sends", smtp.sends)
+	}
+	if smtp.to != "user-1@dev.local" {
+		t.Fatalf("expected dev email to be resolved, got %q", smtp.to)
+	}
+}
+
+func TestSendNotification_FallsBackToMock(t *testing.T) {
+	repo := &mockRepo{}
+	mg := &stubEmailSender{configured: false}
+	smtp := &stubEmailSender{configured: false}
+	uc := usecase.NewNotificationUseCase(repo, mg, smtp, discardLogger())
+
+	n, err := uc.SendNotification(context.Background(), usecase.SendNotificationInput{
+		UserID:  "user-1",
+		Channel: domain.ChannelEmail,
+		Subject: "Test Subject",
+		Body:    "Test Body",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if n.Status != domain.StatusSent {
+		t.Fatalf("expected status 'sent', got '%s'", n.Status)
+	}
+	if n.Channel != domain.ChannelMock {
+		t.Fatalf("expected channel 'mock', got '%s'", n.Channel)
+	}
+	if len(repo.notifications) != 1 {
+		t.Fatalf("expected 1 notification saved, got %d", len(repo.notifications))
+	}
+}
+
 func TestSendNotification_MissingUserID(t *testing.T) {
 	repo := &mockRepo{}
 	uc := newTestUseCase(repo)
- 
-	err := uc.SendNotification(context.Background(), usecase.SendNotificationInput{
+
+	_, err := uc.SendNotification(context.Background(), usecase.SendNotificationInput{
 		UserID:  "",
 		Channel: domain.ChannelMock,
 		Subject: "Test",
@@ -131,12 +210,12 @@ func TestSendNotification_MissingUserID(t *testing.T) {
 		t.Fatalf("expected ErrInvalidNotification, got: %v", err)
 	}
 }
- 
+
 func TestSendNotification_MissingSubject(t *testing.T) {
 	repo := &mockRepo{}
 	uc := newTestUseCase(repo)
- 
-	err := uc.SendNotification(context.Background(), usecase.SendNotificationInput{
+
+	_, err := uc.SendNotification(context.Background(), usecase.SendNotificationInput{
 		UserID:  "user-1",
 		Channel: domain.ChannelMock,
 		Subject: "",
@@ -146,22 +225,22 @@ func TestSendNotification_MissingSubject(t *testing.T) {
 		t.Fatalf("expected ErrInvalidNotification, got: %v", err)
 	}
 }
- 
+
 func TestGetNotifications(t *testing.T) {
 	repo := &mockRepo{}
 	uc := newTestUseCase(repo)
- 
+
 	// Send two notifications for user-1, one for user-2
-	_ = uc.SendNotification(context.Background(), usecase.SendNotificationInput{
+	_, _ = uc.SendNotification(context.Background(), usecase.SendNotificationInput{
 		UserID: "user-1", Channel: domain.ChannelMock, Subject: "S1", Body: "B1",
 	})
-	_ = uc.SendNotification(context.Background(), usecase.SendNotificationInput{
+	_, _ = uc.SendNotification(context.Background(), usecase.SendNotificationInput{
 		UserID: "user-1", Channel: domain.ChannelMock, Subject: "S2", Body: "B2",
 	})
-	_ = uc.SendNotification(context.Background(), usecase.SendNotificationInput{
+	_, _ = uc.SendNotification(context.Background(), usecase.SendNotificationInput{
 		UserID: "user-2", Channel: domain.ChannelMock, Subject: "S3", Body: "B3",
 	})
- 
+
 	result, err := uc.GetNotifications(context.Background(), "user-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -170,11 +249,11 @@ func TestGetNotifications(t *testing.T) {
 		t.Fatalf("expected 2 notifications for user-1, got %d", len(result))
 	}
 }
- 
+
 func TestSendReminder_Immediate(t *testing.T) {
 	repo := &mockRepo{}
 	uc := newTestUseCase(repo)
- 
+
 	// ScheduledAt within 1 hour → should be sent immediately
 	err := uc.SendReminder(context.Background(), usecase.SendReminderInput{
 		EventID:     "event-1",
@@ -193,11 +272,11 @@ func TestSendReminder_Immediate(t *testing.T) {
 		t.Fatalf("expected status 'sent', got '%s'", repo.reminders[0].Status)
 	}
 }
- 
+
 func TestSendReminder_Scheduled(t *testing.T) {
 	repo := &mockRepo{}
 	uc := newTestUseCase(repo)
- 
+
 	// ScheduledAt more than 1 hour away → should stay pending
 	err := uc.SendReminder(context.Background(), usecase.SendReminderInput{
 		EventID:     "event-2",
@@ -212,11 +291,11 @@ func TestSendReminder_Scheduled(t *testing.T) {
 		t.Fatalf("expected status 'pending', got '%s'", repo.reminders[0].Status)
 	}
 }
- 
+
 func TestSendReminder_MissingFields(t *testing.T) {
 	repo := &mockRepo{}
 	uc := newTestUseCase(repo)
- 
+
 	err := uc.SendReminder(context.Background(), usecase.SendReminderInput{
 		EventID: "",
 		UserID:  "",
@@ -225,7 +304,7 @@ func TestSendReminder_MissingFields(t *testing.T) {
 		t.Fatalf("expected ErrInvalidNotification, got: %v", err)
 	}
 }
- 
+
 func TestDomainConstants(t *testing.T) {
 	if domain.ChannelEmail != "email" {
 		t.Error("ChannelEmail should be 'email'")

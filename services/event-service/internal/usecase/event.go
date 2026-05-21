@@ -106,6 +106,7 @@ func (u *EventUseCase) CreateEvent(ctx context.Context, input CreateEventInput) 
 		return nil, err
 	}
 	metrics.EventsCreatedTotal.Inc()
+	u.log.InfoContext(ctx, "event created", "event_id", event.ID, "creator_id", event.CreatorID, "title", event.Title, "sport", event.Sport)
 	u.publish(ctx, subjectEventCreated, eventPayload(event))
 	return event, nil
 }
@@ -171,6 +172,7 @@ func (u *EventUseCase) UpdateEvent(ctx context.Context, id string, input CreateE
 	if err != nil {
 		return nil, err
 	}
+	u.log.InfoContext(ctx, "event updated", "event_id", updated.ID, "creator_id", updated.CreatorID, "title", updated.Title)
 	u.publish(ctx, subjectEventUpdated, eventPayload(updated))
 	return updated, nil
 }
@@ -187,6 +189,7 @@ func (u *EventUseCase) DeleteEvent(ctx context.Context, id string, userID string
 	if err := u.events.Delete(ctx, id, userID); err != nil {
 		return err
 	}
+	u.log.InfoContext(ctx, "event deleted", "event_id", id, "user_id", userID)
 	u.deleteEventCache(ctx, id)
 	return nil
 }
@@ -205,11 +208,9 @@ func (u *EventUseCase) JoinEvent(ctx context.Context, id string, userID string) 
 		return nil, err
 	}
 	metrics.EventJoinTotal.Inc()
+	u.log.InfoContext(ctx, "event joined", "event_id", id, "user_id", userID, "participants_count", event.ParticipantsCount)
 	u.deleteEventCache(ctx, id)
-	u.publish(ctx, subjectEventJoined, map[string]string{
-		"event_id": id,
-		"user_id":  userID,
-	})
+	u.publish(ctx, subjectEventJoined, eventPayloadForUser(event, userID))
 	return event, nil
 }
 
@@ -226,6 +227,7 @@ func (u *EventUseCase) LeaveEvent(ctx context.Context, id string, userID string)
 	if err != nil {
 		return nil, err
 	}
+	u.log.InfoContext(ctx, "event left", "event_id", id, "user_id", userID, "participants_count", event.ParticipantsCount)
 	u.deleteEventCache(ctx, id)
 	return event, nil
 }
@@ -331,6 +333,7 @@ func (u *EventUseCase) publish(ctx context.Context, subject string, payload any)
 			continue
 		}
 		metrics.NATSPublishedTotal.WithLabelValues(subject).Inc()
+		u.log.InfoContext(ctx, "nats event published", "subject", subject, "payload", string(body))
 		return
 	}
 }
@@ -344,4 +347,10 @@ func eventPayload(event *domain.Event) map[string]any {
 		"start_time":         event.StartTime.UTC().Format(time.RFC3339),
 		"participants_count": event.ParticipantsCount,
 	}
+}
+
+func eventPayloadForUser(event *domain.Event, userID string) map[string]any {
+	payload := eventPayload(event)
+	payload["user_id"] = userID
+	return payload
 }

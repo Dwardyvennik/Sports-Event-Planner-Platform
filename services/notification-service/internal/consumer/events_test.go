@@ -17,10 +17,10 @@ import (
 
 func TestEventConsumerHandleRetriesAndUsesPayloadUserID(t *testing.T) {
 	repo := &retryNotificationRepository{failuresRemaining: 2}
-	notifications := usecase.NewNotificationUseCase(repo, nil, discardLogger())
-	consumer := NewEventConsumer(nil, notifications, discardLogger())
+	notifications := usecase.NewNotificationUseCase(repo, nil, nil, discardLogger())
+	consumer := NewEventConsumer(nil, notifications, discardLogger(), "")
 
-	consumer.handle(context.Background(), &nats.Msg{Data: []byte(`{
+	consumer.handle(context.Background(), eventSubscription{subject: eventCreatedSubject, action: "created"}, &nats.Msg{Data: []byte(`{
 		"event_id":"event-123",
 		"user_id":"user-456",
 		"title":"Retry Match",
@@ -46,13 +46,66 @@ func TestEventConsumerHandleRetriesAndUsesPayloadUserID(t *testing.T) {
 
 func TestEventConsumerHandleInvalidJSONDoesNotSave(t *testing.T) {
 	repo := &retryNotificationRepository{}
-	notifications := usecase.NewNotificationUseCase(repo, nil, discardLogger())
-	consumer := NewEventConsumer(nil, notifications, discardLogger())
+	notifications := usecase.NewNotificationUseCase(repo, nil, nil, discardLogger())
+	consumer := NewEventConsumer(nil, notifications, discardLogger(), "")
 
-	consumer.handle(context.Background(), &nats.Msg{Data: []byte(`not-json`)})
+	consumer.handle(context.Background(), eventSubscription{subject: eventCreatedSubject, action: "created"}, &nats.Msg{Data: []byte(`not-json`)})
 
 	if repo.saveAttempts != 0 {
 		t.Fatalf("expected no save attempts for invalid json, got %d", repo.saveAttempts)
+	}
+}
+
+func TestEventConsumerHandleUpdatedAndJoinedSubjects(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		sub     eventSubscription
+		subject string
+	}{
+		{name: "updated", sub: eventSubscription{subject: eventUpdatedSubject, action: "updated"}, subject: "Event updated: Demo Match"},
+		{name: "joined", sub: eventSubscription{subject: eventJoinedSubject, action: "joined"}, subject: "Joined event: Demo Match"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := &retryNotificationRepository{}
+			notifications := usecase.NewNotificationUseCase(repo, nil, nil, discardLogger())
+			consumer := NewEventConsumer(nil, notifications, discardLogger(), "")
+
+			consumer.handle(context.Background(), tc.sub, &nats.Msg{Data: []byte(`{
+				"event_id":"event-123",
+				"user_id":"user-456",
+				"title":"Demo Match",
+				"sport":"football",
+				"start_time":"2026-06-01T10:00:00Z"
+			}`)})
+
+			if repo.saveAttempts != 1 {
+				t.Fatalf("expected one notification save, got %d", repo.saveAttempts)
+			}
+			if repo.saved[0].Subject != tc.subject {
+				t.Fatalf("expected subject %q, got %q", tc.subject, repo.saved[0].Subject)
+			}
+		})
+	}
+}
+
+func TestEventConsumer_UsesConfiguredChannel(t *testing.T) {
+	repo := &retryNotificationRepository{}
+	notifications := usecase.NewNotificationUseCase(repo, nil, configuredEmailSender{}, discardLogger())
+	consumer := NewEventConsumer(nil, notifications, discardLogger(), domain.ChannelEmail)
+
+	consumer.handle(context.Background(), eventSubscription{subject: eventCreatedSubject, action: "created"}, &nats.Msg{Data: []byte(`{
+		"event_id":"event-123",
+		"user_id":"user-456",
+		"title":"Email Match",
+		"sport":"football",
+		"start_time":"2026-06-01T10:00:00Z"
+	}`)})
+
+	if repo.saveAttempts != 1 {
+		t.Fatalf("expected one notification save, got %d", repo.saveAttempts)
+	}
+	if repo.saved[0].Channel != domain.ChannelEmail {
+		t.Fatalf("expected configured channel 'email', got %q", repo.saved[0].Channel)
 	}
 }
 
@@ -100,4 +153,14 @@ func (r *retryNotificationRepository) UpdateReminderStatus(context.Context, stri
 
 func discardLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
+type configuredEmailSender struct{}
+
+func (configuredEmailSender) Send(string, string, string) error {
+	return nil
+}
+
+func (configuredEmailSender) IsConfigured() bool {
+	return true
 }

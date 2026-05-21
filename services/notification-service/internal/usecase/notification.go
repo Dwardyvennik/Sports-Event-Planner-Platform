@@ -8,7 +8,6 @@ import (
 
 	"github.com/dwardyvennik/sports-event-planner-platform/pkg/metrics"
 	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/domain"
-	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/mailgun"
 )
 
 type NotificationRepository interface {
@@ -18,6 +17,11 @@ type NotificationRepository interface {
 	SaveReminder(ctx context.Context, rem *domain.Reminder) error
 	GetPendingReminders(ctx context.Context, before time.Time) ([]*domain.Reminder, error)
 	UpdateReminderStatus(ctx context.Context, id, status string) error
+}
+
+type EmailSender interface {
+	Send(to, subject, body string) error
+	IsConfigured() bool
 }
 
 type SendNotificationInput struct {
@@ -36,14 +40,16 @@ type SendReminderInput struct {
 
 type NotificationUseCase struct {
 	notifications NotificationRepository
-	mailgun       *mailgun.Client
+	mailgun       EmailSender
+	smtp          EmailSender
 	log           *slog.Logger
 }
 
-func NewNotificationUseCase(notifications NotificationRepository, mg *mailgun.Client, log *slog.Logger) *NotificationUseCase {
+func NewNotificationUseCase(notifications NotificationRepository, mg EmailSender, smtp EmailSender, log *slog.Logger) *NotificationUseCase {
 	return &NotificationUseCase{
 		notifications: notifications,
 		mailgun:       mg,
+		smtp:          smtp,
 		log:           log,
 	}
 }
@@ -55,9 +61,9 @@ func (u *NotificationUseCase) Health(ctx context.Context) error {
 	return u.notifications.Ping(ctx)
 }
 
-func (u *NotificationUseCase) SendNotification(ctx context.Context, input SendNotificationInput) error {
+func (u *NotificationUseCase) SendNotification(ctx context.Context, input SendNotificationInput) (*domain.Notification, error) {
 	if input.UserID == "" || input.Subject == "" {
-		return domain.ErrInvalidNotification
+		return nil, domain.ErrInvalidNotification
 	}
 
 	n := &domain.Notification{
@@ -73,16 +79,26 @@ func (u *NotificationUseCase) SendNotification(ctx context.Context, input SendNo
 	switch input.Channel {
 	case domain.ChannelEmail:
 		if u.mailgun != nil && u.mailgun.IsConfigured() {
-			sendErr = u.mailgun.Send(input.UserID, input.Subject, input.Body)
+			to := u.resolveEmail(ctx, input.UserID)
+			u.log.Info("sending email notification", "provider", "mailgun", "user_id", input.UserID, "to", to, "subject", input.Subject)
+			sendErr = u.mailgun.Send(to, input.Subject, input.Body)
+		} else if u.smtp != nil && u.smtp.IsConfigured() {
+			to := u.resolveEmail(ctx, input.UserID)
+			u.log.Info("sending email notification", "provider", "smtp", "user_id", input.UserID, "to", to, "subject", input.Subject)
+			sendErr = u.smtp.Send(to, input.Subject, input.Body)
 		} else {
-			u.log.Warn("mailgun not configured, falling back to mock", "user_id", input.UserID)
+			n.Channel = domain.ChannelMock
+			u.log.Warn("email providers not configured, falling back to mock", "user_id", input.UserID)
 			u.logMock(input.UserID, input.Subject, input.Body)
 		}
 
 	case domain.ChannelMock:
+		n.Channel = domain.ChannelMock
+		u.log.Info("sending mock notification", "provider", "mock", "user_id", input.UserID, "subject", input.Subject)
 		u.logMock(input.UserID, input.Subject, input.Body)
 
 	default:
+		n.Channel = domain.ChannelMock
 		u.log.Warn("unknown notification channel, using mock", "channel", input.Channel)
 		u.logMock(input.UserID, input.Subject, input.Body)
 	}
@@ -100,9 +116,10 @@ func (u *NotificationUseCase) SendNotification(ctx context.Context, input SendNo
 
 	if err := u.notifications.SaveNotification(ctx, n); err != nil {
 		metrics.NotificationsFailedTotal.Inc()
-		return fmt.Errorf("save notification: %w", err)
+		return nil, fmt.Errorf("save notification: %w", err)
 	}
-	return sendErr
+	u.log.Info("notification sent", "user_id", input.UserID, "channel", n.Channel, "subject", input.Subject, "status", n.Status)
+	return n, sendErr
 }
 
 func (u *NotificationUseCase) SendReminder(ctx context.Context, input SendReminderInput) error {
@@ -181,4 +198,10 @@ func (u *NotificationUseCase) logMock(userID, subject, body string) {
 		"subject", subject,
 		"body", body,
 	)
+}
+
+func (u *NotificationUseCase) resolveEmail(ctx context.Context, userID string) string {
+	_ = ctx
+	// TODO: Resolve through Auth Service over gRPC in production.
+	return userID + "@dev.local"
 }

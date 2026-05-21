@@ -42,14 +42,15 @@ func (s *Server) SendNotification(ctx context.Context, req *notificationv1.SendN
 		Body:    req.Body,
 	}
 
-	if err := s.notifications.SendNotification(ctx, input); err != nil {
+	n, err := s.notifications.SendNotification(ctx, input)
+	if err != nil {
 		s.log.Error("SendNotification rpc", "error", err)
 		return nil, grpcError(err)
 	}
 
 	return &notificationv1.NotificationResponse{
-		NotificationId: req.UserId,
-		Status:         "sent",
+		NotificationId: n.ID,
+		Status:         n.Status,
 	}, nil
 }
 

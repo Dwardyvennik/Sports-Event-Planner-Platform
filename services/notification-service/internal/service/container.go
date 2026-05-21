@@ -15,6 +15,7 @@ import (
 	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/consumer"
 	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/mailgun"
 	notificationpostgres "github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/repository/postgres"
+	smtpmail "github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/smtp"
 	"github.com/dwardyvennik/sports-event-planner-platform/services/notification-service/internal/usecase"
 )
 
@@ -39,13 +40,19 @@ func NewContainer(ctx context.Context, cfg config.NotificationConfig, log *slog.
 	}
 
 	mg := mailgun.NewClient(cfg.Mailgun.APIKey, cfg.Mailgun.Domain, cfg.Mailgun.From)
+	smtp := smtpmail.NewSMTPClient(cfg.SMTP.Host, cfg.SMTP.Port, cfg.SMTP.From, cfg.SMTP.TLS)
 
 	notifications := notificationpostgres.NewNotificationRepository(db)
-	uc := usecase.NewNotificationUseCase(notifications, mg, log)
+	uc := usecase.NewNotificationUseCase(notifications, mg, smtp, log)
 
-	ec := consumer.NewEventConsumer(broker, uc, log)
+	ec := consumer.NewEventConsumer(broker, uc, log, cfg.EventNotificationChannel)
 
-	log.Info("notification dependencies wired")
+	log.Info("notification dependencies wired",
+		"smtp_configured", smtp.IsConfigured(),
+		"mailgun_configured", mg.IsConfigured(),
+		"email_channel_enabled", cfg.EmailChannelEnabled,
+		"event_notification_channel", cfg.EventNotificationChannel,
+	)
 
 	return &Container{
 		DB:                     db,

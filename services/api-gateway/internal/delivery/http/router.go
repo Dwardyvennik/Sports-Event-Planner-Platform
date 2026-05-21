@@ -196,7 +196,7 @@ func createEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 			CreatorId:       currentUserID(c),
 			MaxParticipants: req.MaxParticipants,
 		})
-		respond(c, resp, err)
+		respondEvent(c, resp, err)
 	}
 }
 
@@ -206,7 +206,7 @@ func getEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 		defer cancel()
 
 		resp, err := client.GetEvent(ctx, &eventv1.GetEventRequest{EventId: c.Param("id")})
-		respond(c, resp, err)
+		respondEvent(c, resp, err)
 	}
 }
 
@@ -230,7 +230,7 @@ func listEventsHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 			Status:        c.Query("status"),
 			City:          c.Query("city"),
 		})
-		respond(c, resp, err)
+		respondEvents(c, resp, err)
 	}
 }
 
@@ -260,7 +260,7 @@ func updateEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 			City:            req.City,
 			MaxParticipants: req.MaxParticipants,
 		})
-		respond(c, resp, err)
+		respondEvent(c, resp, err)
 	}
 }
 
@@ -280,7 +280,7 @@ func joinEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 		defer cancel()
 
 		resp, err := client.JoinEvent(ctx, &eventv1.EventMembershipRequest{EventId: c.Param("id"), UserId: currentUserID(c)})
-		respond(c, resp, err)
+		respondEvent(c, resp, err)
 	}
 }
 
@@ -290,7 +290,7 @@ func leaveEventHandler(client eventv1.EventServiceClient) gin.HandlerFunc {
 		defer cancel()
 
 		resp, err := client.LeaveEvent(ctx, &eventv1.EventMembershipRequest{EventId: c.Param("id"), UserId: currentUserID(c)})
-		respond(c, resp, err)
+		respondEvent(c, resp, err)
 	}
 }
 
@@ -358,6 +358,71 @@ func respond(c *gin.Context, payload any, err error) {
 		return
 	}
 	c.JSON(nethttp.StatusOK, payload)
+}
+
+func respondEvent(c *gin.Context, payload *eventv1.EventResponse, err error) {
+	if err != nil {
+		writeGRPCError(c, err)
+		return
+	}
+	c.JSON(nethttp.StatusOK, gin.H{"event": eventDTOFromProto(payload.Event)})
+}
+
+func respondEvents(c *gin.Context, payload *eventv1.ListEventsResponse, err error) {
+	if err != nil {
+		writeGRPCError(c, err)
+		return
+	}
+	events := make([]eventDTO, 0, len(payload.Events))
+	for _, event := range payload.Events {
+		events = append(events, eventDTOFromProto(event))
+	}
+	c.JSON(nethttp.StatusOK, gin.H{"events": events})
+}
+
+type eventDTO struct {
+	ID                string `json:"id"`
+	Sport             string `json:"sport"`
+	Category          string `json:"category"`
+	Competition       string `json:"competition"`
+	Title             string `json:"title"`
+	Description       string `json:"description"`
+	Location          string `json:"location"`
+	StartTime         string `json:"start_time"`
+	EndTime           string `json:"end_time"`
+	Status            string `json:"status"`
+	Country           string `json:"country"`
+	City              string `json:"city"`
+	CreatedAt         string `json:"created_at"`
+	UpdatedAt         string `json:"updated_at"`
+	CreatorID         string `json:"creator_id"`
+	MaxParticipants   int32  `json:"max_participants"`
+	ParticipantsCount int32  `json:"participants_count"`
+}
+
+func eventDTOFromProto(event *eventv1.Event) eventDTO {
+	if event == nil {
+		return eventDTO{}
+	}
+	return eventDTO{
+		ID:                event.Id,
+		Sport:             event.Sport,
+		Category:          event.Category,
+		Competition:       event.Competition,
+		Title:             event.Title,
+		Description:       event.Description,
+		Location:          event.Location,
+		StartTime:         event.StartTime,
+		EndTime:           event.EndTime,
+		Status:            event.Status,
+		Country:           event.Country,
+		City:              event.City,
+		CreatedAt:         event.CreatedAt,
+		UpdatedAt:         event.UpdatedAt,
+		CreatorID:         event.CreatorId,
+		MaxParticipants:   event.MaxParticipants,
+		ParticipantsCount: event.ParticipantsCount,
+	}
 }
 
 func timeoutContext(c *gin.Context) (context.Context, context.CancelFunc) {

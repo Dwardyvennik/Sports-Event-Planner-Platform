@@ -37,6 +37,7 @@ func (s *Server) Register(ctx context.Context, req *authv1.RegisterRequest) (*au
 	if err != nil {
 		return nil, grpcError(err)
 	}
+	s.log.InfoContext(ctx, "auth register success", "user_id", tokens.UserID, "email", tokens.Email, "role", tokens.Role)
 	return &authv1.AuthResponse{
 		UserId:       tokens.UserID,
 		AccessToken:  tokens.AccessToken,
@@ -52,6 +53,7 @@ func (s *Server) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.A
 	if err != nil {
 		return nil, grpcError(err)
 	}
+	s.log.InfoContext(ctx, "auth login success", "user_id", tokens.UserID, "email", tokens.Email, "role", tokens.Role)
 	return &authv1.AuthResponse{
 		UserId:       tokens.UserID,
 		AccessToken:  tokens.AccessToken,
@@ -67,6 +69,7 @@ func (s *Server) RefreshToken(ctx context.Context, req *authv1.RefreshTokenReque
 	if err != nil {
 		return nil, grpcError(err)
 	}
+	s.log.InfoContext(ctx, "auth refresh success", "user_id", tokens.UserID, "email", tokens.Email, "role", tokens.Role)
 	return &authv1.AuthResponse{
 		UserId:       tokens.UserID,
 		AccessToken:  tokens.AccessToken,
